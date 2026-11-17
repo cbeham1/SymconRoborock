@@ -177,6 +177,9 @@ class RoborockCloudVacuum extends IPSModule
             case 'Repeat':
                 $this->SetValue('Repeat', max(1, min(3, (int) $Value)));
                 break;
+            case 'Volume':
+                $ok = $this->SetVolume((int) $Value);
+                break;
             default:
                 if (strpos((string) $Ident, 'Room') === 0) {
                     $this->SetValue($Ident, (bool) $Value);
@@ -207,7 +210,7 @@ class RoborockCloudVacuum extends IPSModule
 
         $count = $this->ReadAttributeInteger('UpdateCount');
         $this->WriteAttributeInteger('UpdateCount', $count + 1);
-        $calls = [['method' => 'get_status', 'params' => []]];
+        $calls = [['method' => 'get_status', 'params' => []], ['method' => 'get_sound_volume', 'params' => []]];
         $withConsumables = $this->ReadPropertyBoolean('ShowConsumables') && $count % self::CONSUMABLE_EVERY === 0;
         if ($withConsumables) {
             $calls[] = ['method' => 'get_consumable', 'params' => []];
@@ -247,7 +250,13 @@ class RoborockCloudVacuum extends IPSModule
         }
         $this->ApplyStatus($status, $online);
 
-        $consumables = $withConsumables ? $this->FirstEntry($results[1]['result'] ?? null) : null;
+        $volume = $results[1]['result'] ?? null;
+        $volume = is_array($volume) ? ($volume[0] ?? null) : $volume;
+        if (is_numeric($volume)) {
+            $this->SetValueIfChanged('Volume', max(0, min(100, (int) $volume)));
+        }
+
+        $consumables = $withConsumables ? $this->FirstEntry($results[2]['result'] ?? null) : null;
         if ($consumables !== null) {
             foreach (self::CONSUMABLES as $ident => [$key, $lifetime]) {
                 if (isset($consumables[$key]) && is_numeric($consumables[$key])) {
@@ -402,6 +411,12 @@ class RoborockCloudVacuum extends IPSModule
     public function SetMopMode(int $Value): bool
     {
         return $this->SetMode('set_mop_mode', 'MopMode', $Value);
+    }
+
+    /** Voice volume of the robot 0..100 %. */
+    public function SetVolume(int $Value): bool
+    {
+        return $this->SetMode('change_sound_volume', 'Volume', max(0, min(100, $Value)));
     }
 
     /** Resets the counter of a consumable after cleaning/replacing it: MainBrush, SideBrush, Filter or Sensors. */
@@ -616,6 +631,8 @@ class RoborockCloudVacuum extends IPSModule
         $this->MaintainVariable('CleanArea', $this->Translate('Cleaned area'), VARIABLETYPE_FLOAT, 'RRV.Area', 10, true);
         $this->MaintainVariable('TaskOpen', $this->Translate('Cleaning task not finished'), VARIABLETYPE_BOOLEAN, '', 11, true);
         $this->MaintainVariable('Online', $this->Translate('Online'), VARIABLETYPE_BOOLEAN, '', 12, true);
+        $this->MaintainVariable('Volume', $this->Translate('Volume'), VARIABLETYPE_INTEGER, '~Intensity.100', 13, true);
+        $this->EnableAction('Volume');
         $this->MaintainVariable('MainBrush', $this->Translate('Main brush'), VARIABLETYPE_INTEGER, 'RRV.Percent', 20, $consumables);
         $this->MaintainVariable('SideBrush', $this->Translate('Side brush'), VARIABLETYPE_INTEGER, 'RRV.Percent', 21, $consumables);
         $this->MaintainVariable('Filter', $this->Translate('Filter'), VARIABLETYPE_INTEGER, 'RRV.Percent', 22, $consumables);
