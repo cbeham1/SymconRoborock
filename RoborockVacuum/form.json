@@ -1,0 +1,91 @@
+{
+    "elements": [
+        {
+            "type": "ValidationTextBox",
+            "name": "DUID",
+            "caption": "Device ID (DUID, filled in by the configurator)"
+        },
+        {
+            "type": "NumberSpinner",
+            "name": "UpdateInterval",
+            "caption": "Update interval",
+            "suffix": "s",
+            "minimum": 30
+        },
+        {
+            "type": "CheckBox",
+            "name": "ShowRooms",
+            "caption": "Room selection (one switch per room of the map)"
+        },
+        {
+            "type": "CheckBox",
+            "name": "ShowConsumables",
+            "caption": "Consumables (main brush, side brush, filter, sensors)"
+        },
+        {
+            "type": "ExpansionPanel",
+            "caption": "Status tile",
+            "expanded": true,
+            "items": [
+                {
+                    "type": "CheckBox",
+                    "name": "ShowTile",
+                    "caption": "Create status tile (HTML variable for the tile visualization)"
+                },
+                {
+                    "type": "Select",
+                    "name": "TileTheme",
+                    "caption": "Design",
+                    "options": [
+                        {
+                            "caption": "Automatic (light/dark like the device)",
+                            "value": 0
+                        },
+                        {
+                            "caption": "Dark",
+                            "value": 1
+                        },
+                        {
+                            "caption": "Light",
+                            "value": 2
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "actions": [
+        {
+            "type": "RowLayout",
+            "items": [
+                {
+                    "type": "Button",
+                    "caption": "Update now",
+                    "onClick": "RRV_Update($id);"
+                },
+                {
+                    "type": "Button",
+                    "caption": "Reload rooms",
+                    "onClick": "echo RRV_LoadRooms($id);"
+                },
+                {
+                    "type": "Button",
+                    "caption": "Locate robot",
+                    "onClick": "RRV_Locate($id);"
+                }
+            ]
+        }
+    ],
+    "status": [
+        {
+            "code": 201,
+            "icon": "inactive",
+            "caption": "No device ID configured, please create the instance with the configurator"
+        },
+        {
+            "code": 202,
+            "icon": "error",
+            "caption": "Request failed, see debug output"
+        }
+    ]
+}

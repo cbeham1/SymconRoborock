@@ -1,0 +1,12 @@
+{
+    "id": "{83689C66-596C-410C-A68F-4342971AC499}",
+    "author": "Christian Castillo-Beham",
+    "name": "Roborock Cloud",
+    "url": "https://github.com/cbeham1/SymconRoborock",
+    "compatibility": {
+        "version": "7.0"
+    },
+    "version": "1.0",
+    "build": 1,
+    "date": 0
+}

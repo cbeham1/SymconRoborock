@@ -1,0 +1,19 @@
+{
+    "id": "{C5B5DE0B-25B2-40E7-821E-9844129980BB}",
+    "name": "Roborock Cloud Account",
+    "type": 1,
+    "vendor": "Roborock",
+    "aliases": [
+        "Roborock Cloud",
+        "Roborock Konto"
+    ],
+    "url": "https://github.com/cbeham1/SymconRoborock/blob/main/RoborockCloud/README.md",
+    "parentRequirements": [],
+    "childRequirements": [
+        "{15F782DE-FDCB-48E3-9C2A-D193AA34C77E}"
+    ],
+    "implemented": [
+        "{25506804-AEC5-4289-9F9D-4B79C2BCE4F8}"
+    ],
+    "prefix": "RRC"
+}

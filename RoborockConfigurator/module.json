@@ -1,0 +1,18 @@
+{
+    "id": "{FC3ED587-E464-4574-9AE6-2CF053E35069}",
+    "name": "Roborock Cloud Configurator",
+    "type": 4,
+    "vendor": "Roborock",
+    "aliases": [
+        "Roborock Cloud Konfigurator"
+    ],
+    "url": "https://github.com/cbeham1/SymconRoborock/blob/main/RoborockConfigurator/README.md",
+    "parentRequirements": [
+        "{25506804-AEC5-4289-9F9D-4B79C2BCE4F8}"
+    ],
+    "childRequirements": [],
+    "implemented": [
+        "{15F782DE-FDCB-48E3-9C2A-D193AA34C77E}"
+    ],
+    "prefix": "RRK"
+}

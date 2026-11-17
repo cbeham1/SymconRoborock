@@ -1,0 +1,69 @@
+{
+    "elements": [
+        {
+            "type": "Label",
+            "caption": "Login data of the Roborock app. The password is optional: without it, log in with a code sent by e-mail (the login then has to be repeated when Roborock ends it)."
+        },
+        {
+            "type": "ValidationTextBox",
+            "name": "Email",
+            "caption": "E-mail address"
+        },
+        {
+            "type": "PasswordTextBox",
+            "name": "Password",
+            "caption": "Password (optional)"
+        }
+    ],
+    "actions": [
+        {
+            "type": "Button",
+            "caption": "Log in with password",
+            "onClick": "echo RRC_LoginWithPassword($id);"
+        },
+        {
+            "type": "RowLayout",
+            "items": [
+                {
+                    "type": "Button",
+                    "caption": "Send code by e-mail",
+                    "onClick": "echo RRC_RequestCode($id);"
+                },
+                {
+                    "type": "ValidationTextBox",
+                    "name": "Code",
+                    "caption": "Code from the e-mail",
+                    "width": "200px"
+                },
+                {
+                    "type": "Button",
+                    "caption": "Log in with code",
+                    "onClick": "echo RRC_LoginWithCode($id, $Code);"
+                }
+            ]
+        },
+        {
+            "type": "Button",
+            "caption": "Log out",
+            "onClick": "echo RRC_Logout($id);",
+            "confirm": "Delete the stored login of this instance?"
+        }
+    ],
+    "status": [
+        {
+            "code": 201,
+            "icon": "inactive",
+            "caption": "Please log in (button below)"
+        },
+        {
+            "code": 202,
+            "icon": "error",
+            "caption": "Login failed, please check the login data or log in with a code"
+        },
+        {
+            "code": 203,
+            "icon": "error",
+            "caption": "No connection to the Roborock cloud"
+        }
+    ]
+}
