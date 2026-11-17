@@ -115,6 +115,7 @@ class RoborockCloudVacuum extends IPSModule
         $this->RegisterPropertyInteger('UpdateInterval', 120);
         $this->RegisterPropertyBoolean('ShowRooms', true);
         $this->RegisterPropertyBoolean('ShowConsumables', true);
+        $this->RegisterPropertyBoolean('ShowStatistics', true);
         $this->RegisterPropertyBoolean('ShowTile', true);
         $this->RegisterPropertyInteger('TileTheme', 0);
 
@@ -211,7 +212,15 @@ class RoborockCloudVacuum extends IPSModule
         if ($withConsumables) {
             $calls[] = ['method' => 'get_consumable', 'params' => []];
         }
+        $summaryIndex = -1;
+        if ($this->ReadPropertyBoolean('ShowStatistics') && $count % self::CONSUMABLE_EVERY === 0) {
+            $summaryIndex = count($calls);
+            $calls[] = ['method' => 'get_clean_summary', 'params' => []];
+        }
         $results = $this->Request('RPC', ['Calls' => $calls]);
+        if ($summaryIndex > 0 && is_array($results)) {
+            $this->ApplySummary($results[$summaryIndex]['result'] ?? null);
+        }
         if ($results === null) {
             return false;
         }
@@ -395,6 +404,20 @@ class RoborockCloudVacuum extends IPSModule
         return $this->SetMode('set_mop_mode', 'MopMode', $Value);
     }
 
+    /** Resets the counter of a consumable after cleaning/replacing it: MainBrush, SideBrush, Filter or Sensors. */
+    public function ResetConsumable(string $Consumable): bool
+    {
+        if (!isset(self::CONSUMABLES[$Consumable])) {
+            echo $this->Translate('Unknown consumable');
+            return false;
+        }
+        if (!$this->Command('reset_consumable', [self::CONSUMABLES[$Consumable][0]])) {
+            return false;
+        }
+        $this->SetValueIfChanged($Consumable, 100);
+        return true;
+    }
+
     /** Any RPC method of the robot, $Params as JSON array (e.g. "[]"). Returns the answer as JSON. */
     public function SendCommand(string $Method, string $Params): string
     {
@@ -463,6 +486,30 @@ class RoborockCloudVacuum extends IPSModule
             return $result[0];
         }
         return is_array($result) && !isset($result[0]) && $result !== [] ? $result : null;
+    }
+
+    /** Totals of get_clean_summary: list [time s, area mm², count, ...] or object {clean_time, clean_area, clean_count}. */
+    private function ApplySummary($result): void
+    {
+        if (!is_array($result)) {
+            return;
+        }
+        if (isset($result['clean_time']) || isset($result['clean_area'])) {
+            $time = $result['clean_time'] ?? null;
+            $area = $result['clean_area'] ?? null;
+            $number = $result['clean_count'] ?? null;
+        } else {
+            [$time, $area, $number] = array_pad(array_values($result), 3, null);
+        }
+        if (is_numeric($area)) {
+            $this->SetValueIfChanged('TotalArea', round((float) $area / 1000000, 1));
+        }
+        if (is_numeric($time)) {
+            $this->SetValueIfChanged('TotalTime', round((float) $time / 3600, 1));
+        }
+        if (is_numeric($number)) {
+            $this->SetValueIfChanged('TotalCount', (int) $number);
+        }
     }
 
     /** Status values of the device list (data points 120-124) in the format of get_status. */
@@ -573,6 +620,10 @@ class RoborockCloudVacuum extends IPSModule
         $this->MaintainVariable('SideBrush', $this->Translate('Side brush'), VARIABLETYPE_INTEGER, 'RRV.Percent', 21, $consumables);
         $this->MaintainVariable('Filter', $this->Translate('Filter'), VARIABLETYPE_INTEGER, 'RRV.Percent', 22, $consumables);
         $this->MaintainVariable('Sensors', $this->Translate('Sensors'), VARIABLETYPE_INTEGER, 'RRV.Percent', 23, $consumables);
+        $statistics = $this->ReadPropertyBoolean('ShowStatistics');
+        $this->MaintainVariable('TotalArea', $this->Translate('Total cleaned area'), VARIABLETYPE_FLOAT, 'RRV.Area', 30, $statistics);
+        $this->MaintainVariable('TotalTime', $this->Translate('Total cleaning time'), VARIABLETYPE_FLOAT, 'RRV.Hours', 31, $statistics);
+        $this->MaintainVariable('TotalCount', $this->Translate('Number of cleanings'), VARIABLETYPE_INTEGER, '', 32, $statistics);
         $this->MaintainVariable('Repeat', $this->Translate('Passes'), VARIABLETYPE_INTEGER, 'RRV.Repeat', 99, $rooms);
 
         $this->EnableAction('Control');
@@ -821,6 +872,12 @@ class RoborockCloudVacuum extends IPSModule
             IPS_CreateVariableProfile('RRV.Area', VARIABLETYPE_FLOAT);
             IPS_SetVariableProfileDigits('RRV.Area', 1);
             IPS_SetVariableProfileText('RRV.Area', '', ' m²');
+        }
+        if (!IPS_VariableProfileExists('RRV.Hours')) {
+            IPS_CreateVariableProfile('RRV.Hours', VARIABLETYPE_FLOAT);
+            IPS_SetVariableProfileDigits('RRV.Hours', 1);
+            IPS_SetVariableProfileText('RRV.Hours', '', ' h');
+            IPS_SetVariableProfileIcon('RRV.Hours', 'Clock');
         }
         if (!IPS_VariableProfileExists('RRV.Percent')) {
             IPS_CreateVariableProfile('RRV.Percent', VARIABLETYPE_INTEGER);

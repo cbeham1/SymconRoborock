@@ -46,6 +46,7 @@ bool   RRV_WashMop(int $InstanceID);
 bool   RRV_SetFanPower(int $InstanceID, int $Value);   // 101 quiet ... 104 max, 105 off, 106 custom, 108 max+
 bool   RRV_SetWaterMode(int $InstanceID, int $Value);  // 200 off, 201 low, 202 medium, 203 high
 bool   RRV_SetMopMode(int $InstanceID, int $Value);    // 300 standard, 301 deep, 303 deep+, 304 fast
+bool   RRV_ResetConsumable(int $InstanceID, string $Consumable); // MainBrush, SideBrush, Filter, Sensors
 string RRV_SendCommand(int $InstanceID, string $Method, string $Params); // any RPC method, answer as JSON
 ```
 

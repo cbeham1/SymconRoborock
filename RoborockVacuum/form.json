@@ -23,6 +23,11 @@
             "caption": "Consumables (main brush, side brush, filter, sensors)"
         },
         {
+            "type": "CheckBox",
+            "name": "ShowStatistics",
+            "caption": "Cleaning statistics (total area, total time, number of cleanings)"
+        },
+        {
             "type": "ExpansionPanel",
             "caption": "Status tile",
             "expanded": true,
