@@ -880,6 +880,10 @@ class RoborockCloudVacuum extends IPSModule
             IPS_SetVariableProfileText('RRV.Repeat', '', ' x');
             IPS_SetVariableProfileIcon('RRV.Repeat', 'Repeat');
         }
+        // Passes as selection (buttons) instead of a slider
+        foreach ([1, 2, 3] as $passes) {
+            IPS_SetVariableProfileAssociation('RRV.Repeat', $passes, $passes . 'x', '', -1);
+        }
         if (!IPS_VariableProfileExists('RRV.Minutes')) {
             IPS_CreateVariableProfile('RRV.Minutes', VARIABLETYPE_INTEGER);
             IPS_SetVariableProfileText('RRV.Minutes', '', ' min');
