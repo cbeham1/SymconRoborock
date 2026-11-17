@@ -11,7 +11,7 @@ declare(strict_types=1);
  * suction power, water flow and mop mode. Optional status tile (HTML) for
  * the tile visualization.
  */
-class RoborockVacuum extends IPSModule
+class RoborockCloudVacuum extends IPSModule
 {
     private const DATA_TO_PARENT = '{25506804-AEC5-4289-9F9D-4B79C2BCE4F8}';
     private const MIN_INTERVAL = 30;

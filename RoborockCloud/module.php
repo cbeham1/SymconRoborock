@@ -16,7 +16,7 @@ declare(strict_types=1);
  * protocol was reimplemented, no code was taken). Roborock may change the
  * API at any time.
  */
-class RoborockCloud extends IPSModule
+class RoborockCloudAccount extends IPSModule
 {
     private const DEFAULT_BASE_URL = 'https://euiot.roborock.com';
     private const KEY_SALT = 'TXdfu$jyZ#TZHsg4';

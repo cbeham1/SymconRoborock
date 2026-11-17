@@ -8,7 +8,7 @@ declare(strict_types=1);
  * Lists the devices of the Roborock account of the connected cloud instance
  * and creates a Roborock Cloud Vacuum instance for each robot on request.
  */
-class RoborockConfigurator extends IPSModule
+class RoborockCloudConfigurator extends IPSModule
 {
     private const DATA_TO_PARENT = '{25506804-AEC5-4289-9F9D-4B79C2BCE4F8}';
     private const VACUUM_MODULE = '{E197C1BE-E114-40D8-A8BF-4404EC9240CD}';
