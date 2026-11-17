@@ -186,6 +186,10 @@ class RoborockCloudVacuum extends IPSModule
         if (!$ok) {
             echo $this->Translate('Command failed, see debug output / log');
         }
+        // Room selection and settings are shown in the tile at once
+        if ($this->ReadPropertyBoolean('ShowTile')) {
+            $this->SetValueIfChanged('Tile', $this->TileHTML());
+        }
     }
 
     /** Reads the status (and every 30th time the consumables) and updates the variables. */
@@ -614,112 +618,172 @@ class RoborockCloudVacuum extends IPSModule
         }
     }
 
-    /** Status tile: state, battery, current cleaning or settings, error and consumables. */
+    /** Status tile in card design: battery ring, state, settings, cleaning, maintenance bars, rooms. Sizes follow the tile (container units). */
     private function TileHTML(): string
     {
         $e = static fn (string $text): string => htmlspecialchars($text, ENT_QUOTES, 'UTF-8');
+        $t = fn (string $text): string => $this->Translate($text);
         $ok = '#2ecc71';
-        $warn = '#f5a623';
+        $warn = '#f39c12';
         $bad = '#e74c3c';
         $info = '#4aa3ff';
         $grey = '#8a96a3';
 
         $state = (int) $this->GetValue('State');
-        $online = (bool) $this->GetValue('Online');
+        $online = (bool) $this->GetValue('Online') && $state !== 101;
         $error = (int) $this->GetValue('Error');
-        $battery = (int) $this->GetValue('Battery');
+        $battery = max(0, min(100, (int) $this->GetValue('Battery')));
+        $taskOpen = (bool) $this->GetValue('TaskOpen');
         $cleaning = in_array($state, self::CLEANING_STATES, true);
+        $charging = in_array($state, [8, 100], true);
 
-        if (!$online || $state === 101) {
+        if (!$online) {
             $color = $grey;
         } elseif ($state === 12 || $state === 9 || $error > 0) {
             $color = $bad;
-        } elseif ($state === 10 || ($this->GetValue('TaskOpen') && !$cleaning)) {
+        } elseif ($state === 10 || ($taskOpen && !$cleaning && !$charging)) {
             $color = $warn;
-        } elseif ($cleaning || in_array($state, [1, 6, 15, 22, 23, 25, 26], true)) {
+        } elseif ($cleaning || in_array($state, [1, 6, 15, 16, 22, 23, 25, 26], true)) {
             $color = $info;
         } else {
             $color = $ok;
         }
+        $chip = static fn (string $text, string $c): string => '<span class="chip" style="color:' . $c . ';border-color:' . $c . '66;background:' . $c . '22">' . $text . '</span>';
+        $tile = static fn (string $label, string $value, string $note = ''): string => '<div class="tile"><span>' . $label . '</span><b>' . $value . '</b>'
+            . ($note !== '' ? '<small>' . $note . '</small>' : '') . '</div>';
+        $number = fn (float $value, int $digits = 0): string => number_format($value, $digits, $t('.'), '');
 
-        $sub = [];
+        // Header: icon, name, state chip
+        $headChip = !$online ? $chip($e($t('Offline')), $grey)
+            : ($error > 0 ? $chip($e($t('Error')), $bad) : ($cleaning ? $chip($e($t('Cleaning')), $info) : ($charging ? $chip($e($t('At the dock')), $ok) : $chip($e($t('Online')), $ok))));
+        $icon = '<svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="7.6" r="2"/><path d="M6.4 15.5a7 7 0 0 0 11.2 0"/></svg>';
+
+        // Hero: battery ring + state
+        $batteryColor = $battery <= 20 ? $bad : ($battery <= 40 ? $warn : $ok);
+        $circumference = 2 * M_PI * 42;
+        $ring = '<svg class="ring" viewBox="0 0 100 100"><defs><linearGradient id="rrg" x1="0" y1="0" x2="1" y2="1">'
+            . '<stop offset="0" stop-color="' . $batteryColor . '"/><stop offset="1" stop-color="' . $batteryColor . '" stop-opacity=".55"/></linearGradient></defs>'
+            . '<circle cx="50" cy="50" r="42" fill="none" class="trk" stroke-width="9"/>'
+            . '<circle cx="50" cy="50" r="42" fill="none" stroke="url(#rrg)" stroke-width="9" stroke-linecap="round" stroke-dasharray="' . round($circumference, 1)
+            . '" stroke-dashoffset="' . round($circumference * (1 - $battery / 100), 1) . '" transform="rotate(-90 50 50)"/>'
+            . '<text x="50" y="' . ($charging ? 47 : 50) . '" text-anchor="middle" dominant-baseline="central" class="rv">' . $battery . '%</text>'
+            . '<text x="50" y="69" text-anchor="middle" class="rl">' . $e($charging ? '⚡ ' . $t('Battery') : $t('Battery')) . '</text></svg>';
         if ($cleaning || $state === 10) {
-            $sub[] = sprintf($this->Translate('%d min'), (int) $this->GetValue('CleanTime'));
-            $sub[] = number_format((float) $this->GetValue('CleanArea'), 1, $this->Translate('.'), '') . ' m²';
+            $sub = sprintf($t('%d min'), (int) $this->GetValue('CleanTime')) . ' · ' . $number((float) $this->GetValue('CleanArea'), 1) . ' m²';
+        } elseif ($taskOpen && !$charging) {
+            $sub = $t('Task not finished, can be resumed');
+        } elseif ($charging) {
+            $sub = $t('Charging at the dock');
+        } else {
+            $sub = '';
         }
-        $settings = [];
+        $hero = '<div class="hero">' . $ring . '<div class="heroTx"><div class="big" style="color:' . $color . '">' . $e((string) $this->GetValue('StatusText')) . '</div>'
+            . ($sub !== '' ? '<div class="sub">' . $e($sub) . '</div>' : '') . '</div></div>';
+
+        $alert = '';
+        if ($error > 0 && $online) {
+            $alert = '<div class="alert" style="border-color:' . $bad . '66;background:' . $bad . '1f;color:' . $bad . '">⚠ ' . $e($this->ErrorText($error)) . '</div>';
+        }
+
+        // Info tiles: settings and current/last cleaning
+        $tiles = '';
         $fan = (int) $this->GetValue('FanPower');
-        if (isset(self::FAN_POWER[$fan])) {
-            $settings[] = $this->Translate('Suction') . ' ' . $this->Translate(self::FAN_POWER[$fan]);
-        }
+        $tiles .= $tile($e($t('Suction power')), $e(isset(self::FAN_POWER[$fan]) ? $t(self::FAN_POWER[$fan]) : (string) $fan));
         if (@$this->GetIDForIdent('WaterMode')) {
             $water = (int) $this->GetValue('WaterMode');
-            if (isset(self::WATER_MODE[$water])) {
-                $settings[] = $this->Translate('Water') . ' ' . $this->Translate(self::WATER_MODE[$water]);
-            }
+            $tiles .= $tile($e($t('Water flow')), $e(isset(self::WATER_MODE[$water]) ? $t(self::WATER_MODE[$water]) : (string) $water));
         }
+        if (@$this->GetIDForIdent('MopMode')) {
+            $mop = (int) $this->GetValue('MopMode');
+            $tiles .= $tile($e($t('Mop mode')), $e(isset(self::MOP_MODE[$mop]) ? $t(self::MOP_MODE[$mop]) : (string) $mop));
+        }
+        $tiles .= $tile(
+            $e($t($cleaning || $state === 10 ? 'Current cleaning' : 'Last cleaning')),
+            (int) $this->GetValue('CleanTime') . '<small class="u"> min</small>',
+            $e($number((float) $this->GetValue('CleanArea'), 1) . ' m²')
+        );
 
-        $batteryColor = $battery <= 20 ? $bad : ($battery <= 40 ? $warn : $ok);
-        $charging = in_array($state, [8, 100], true);
-        $html = '<div class="rb"><i style="width:' . $battery . '%;background:' . $batteryColor . '"></i></div>'
-            . '<div class="rl"><span>' . $e($this->Translate('Battery')) . '</span><b style="color:' . $batteryColor . '">'
-            . $battery . ' %' . ($charging ? ' ⚡' : '') . '</b></div>';
-
-        if ($settings !== []) {
-            $html .= '<div class="rl"><span>' . $e($this->Translate('Settings')) . '</span><span>' . $e(implode(' · ', $settings)) . '</span></div>';
-        }
-        if ($error > 0) {
-            $html .= '<div class="rl" style="color:' . $bad . '"><span>' . $e($this->Translate('Error')) . '</span><b>' . $e($this->ErrorText($error)) . '</b></div>';
-        }
+        // Maintenance bars
+        $maintenance = '';
         if ($this->ReadPropertyBoolean('ShowConsumables')) {
-            $parts = [];
-            foreach (['MainBrush' => 'Main brush', 'SideBrush' => 'Side brush', 'Filter' => 'Filter'] as $ident => $label) {
-                $value = (int) $this->GetValue($ident);
-                if (IPS_GetVariable($this->GetIDForIdent($ident))['VariableUpdated'] > 0) {
-                    $style = $value <= 10 ? ' style="color:' . $bad . '"' : ($value <= 25 ? ' style="color:' . $warn . '"' : '');
-                    $parts[] = $e($this->Translate($label)) . ' <b' . $style . '>' . $value . ' %</b>';
+            foreach (['MainBrush' => 'Main brush', 'SideBrush' => 'Side brush', 'Filter' => 'Filter', 'Sensors' => 'Sensors'] as $ident => $label) {
+                $id = @$this->GetIDForIdent($ident);
+                if (!$id || IPS_GetVariable($id)['VariableUpdated'] === 0) {
+                    continue;
                 }
+                $value = max(0, min(100, (int) $this->GetValue($ident)));
+                $c = $value <= 10 ? $bad : ($value <= 25 ? $warn : $ok);
+                $maintenance .= '<div class="mt"><div class="mtT"><span>' . $e($t($label)) . '</span><b style="color:' . $c . '">' . $value . ' %</b></div>'
+                    . '<div class="bar"><i style="width:' . $value . '%;background:linear-gradient(90deg,' . $c . '99,' . $c . ')"></i></div></div>';
             }
-            if ($parts !== []) {
-                $html .= '<div class="rl rs"><span>' . implode('</span><span>', $parts) . '</span></div>';
+            if ($maintenance !== '') {
+                $maintenance = '<div class="sec">' . $e($t('Maintenance')) . '</div><div class="mts">' . $maintenance . '</div>';
             }
         }
 
-        $icon = '<svg class="ri" viewBox="0 0 48 48" style="stroke:' . $color . '"><circle cx="24" cy="24" r="19"/><circle cx="24" cy="24" r="6"/>'
-            . '<path d="M14 12.5a15 15 0 0 1 20 0"/>' . ($cleaning ? '<path d="M9 36l-4 4M39 36l4 4" />' : '') . '</svg>';
+        // Rooms: selected rooms highlighted
+        $rooms = '';
+        if ($this->ReadPropertyBoolean('ShowRooms')) {
+            foreach (json_decode($this->ReadAttributeString('Rooms'), true) ?: [] as $room) {
+                $ident = 'Room' . (int) $room['segment'];
+                $selected = @$this->GetIDForIdent($ident) && $this->GetValue($ident);
+                $rooms .= '<span class="room' . ($selected ? ' on' : '') . '">' . $e((string) $room['name']) . '</span>';
+            }
+            if ($rooms !== '') {
+                $repeat = @$this->GetIDForIdent('Repeat') ? max(1, (int) $this->GetValue('Repeat')) : 1;
+                $rooms = '<div class="sec">' . $e($t('Rooms')) . ($repeat > 1 ? ' · ' . $repeat . '×' : '') . '</div><div class="rooms">' . $rooms . '</div>';
+            }
+        }
 
-        // Colors of both themes as CSS variables; theme 0 = automatic (prefers-color-scheme), 1 = dark, 2 = light
-        $dark = '--fg:#e9eef3;--name:#c9d2db;--sub:#9aa5b1;--track:rgba(255,255,255,.13)';
-        $light = '--fg:#1f2933;--name:#3e4a56;--sub:#5b6672;--track:rgba(0,0,0,.1)';
+        $footer = '<div class="row"><span>' . $e($t('Connection')) . '</span><b>' . $e($t($online ? 'Online' : 'Offline') . ' · ' . $t('Updated') . ' ' . date('H:i')) . '</b></div>';
+
+        // Theme 0 = automatic (prefers-color-scheme), 1 = dark, 2 = light
+        $dark = '--bg1:#252b32;--bg2:#1a1e23;--bd:#343a41;--fg:#e8edf2;--mut:#9aa5b1;--soft:#ffffff0d;--soft2:#ffffff0a;--line:#ffffff14;--trk:#ffffff14';
+        $light = '--bg1:#ffffff;--bg2:#eef1f4;--bd:#d5dbe1;--fg:#1f2933;--mut:#5b6672;--soft:#0000000a;--soft2:#00000008;--line:#00000014;--trk:#00000014';
         $theme = $this->ReadPropertyInteger('TileTheme');
-        $vars = '.rw{' . ($theme === 2 ? $light : $dark) . '}';
+        $vars = '.rr{' . ($theme === 2 ? $light : $dark) . '}';
         if ($theme === 0) {
-            $vars .= '@media (prefers-color-scheme: light){.rw{' . $light . '}}';
+            $vars .= '@media (prefers-color-scheme: light){.rr{' . $light . '}}';
         }
         $css = '<style>'
-            . 'html,body{margin:0;height:100%;background:transparent;font-family:"Segoe UI",Arial,sans-serif}'
-            . '.rw{position:relative;height:100%;min-height:240px;box-sizing:border-box;border:1px solid ' . $color . '66;border-radius:12px;overflow:hidden;color:var(--fg);background:' . $color . '12}'
-            . '.rc{height:100%;box-sizing:border-box;padding:14px 16px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}'
-            . '.ri{width:46px;height:auto;fill:none;stroke-width:2.2;stroke-linecap:round;margin-bottom:6px}'
-            . '.rn{font-size:19px;font-weight:bold;color:var(--name)}'
-            . '.rt{font-size:28px;font-weight:bold;margin:2px 0;line-height:1.15}'
-            . '.ru{color:var(--sub);font-size:14px;margin-top:3px;min-height:18px}'
-            . '.rb{width:100%;height:12px;border-radius:6px;background:var(--track);overflow:hidden;margin-top:14px}'
-            . '.rb i{display:block;height:100%}'
-            . '.rl{width:100%;display:flex;justify-content:space-between;gap:8px;font-size:15px;color:var(--name);margin-top:6px;text-align:right}'
-            . '.rl span:first-child{text-align:left}'
-            . '.rs{font-size:13px;color:var(--sub)}'
-            . '.rf{font-size:11px;color:var(--sub);margin-top:8px}'
+            . 'html,body{height:100%;margin:0;overflow:hidden;background:transparent}'
             . $vars
+            . '.rr{font-family:"Segoe UI",Arial,Helvetica,sans-serif;color:var(--fg);height:100%;box-sizing:border-box;container-type:size}'
+            . '.rr *{box-sizing:border-box}'
+            . '.rr .card{height:100%;background:radial-gradient(120% 60% at 0% 0%,' . $color . '1c,transparent 60%),linear-gradient(160deg,var(--bg1),var(--bg2));'
+            . 'border:1px solid var(--bd);border-top:3px solid ' . $color . ';border-radius:12px;padding:clamp(10px,3cqh,18px) clamp(12px,4cqw,20px);display:flex;flex-direction:column;overflow:hidden}'
+            . '.rr .head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:clamp(6px,2cqh,12px)}'
+            . '.rr .ttl{display:flex;align-items:center;gap:9px;font-weight:bold;font-size:clamp(15px,4.6cqw,19px);min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'
+            . '.rr .ico{width:clamp(20px,6cqw,26px);height:auto;fill:none;stroke:' . $color . ';stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex:none}'
+            . '.rr .chip{display:inline-block;border:1px solid;border-radius:20px;padding:3px 11px;font-size:clamp(11px,3.2cqw,13px);font-weight:bold;white-space:nowrap}'
+            . '.rr .body{flex:1;display:flex;flex-direction:column;gap:clamp(7px,2.2cqh,13px);min-height:0;overflow:hidden}'
+            . '.rr .hero{display:flex;align-items:center;gap:clamp(12px,4cqw,22px)}'
+            . '.rr .ring{width:clamp(76px,min(28cqw,22cqh),140px);height:auto;flex:none;filter:drop-shadow(0 0 8px ' . $batteryColor . '33)}'
+            . '.rr .ring .trk{stroke:var(--trk)}.rr .ring .rv{fill:var(--fg);font-size:22px;font-weight:bold}.rr .ring .rl{fill:var(--mut);font-size:10px}'
+            . '.rr .heroTx{flex:1;min-width:0}'
+            . '.rr .big{font-size:clamp(20px,min(8cqw,7cqh),36px);font-weight:700;line-height:1.1;letter-spacing:-.3px}'
+            . '.rr .sub{color:var(--mut);font-size:clamp(12px,3.6cqw,15px);margin-top:5px}'
+            . '.rr .alert{border:1px solid;border-radius:10px;padding:clamp(5px,1.6cqh,9px) 12px;font-weight:600;font-size:clamp(12px,3.6cqw,15px)}'
+            . '.rr .tiles{display:grid;grid-template-columns:1fr 1fr;gap:clamp(6px,1.8cqh,10px)}'
+            . '.rr .tile{background:var(--soft);border:1px solid var(--soft2);border-radius:10px;padding:clamp(6px,1.8cqh,11px) 12px;display:flex;flex-direction:column;gap:2px;min-width:0}'
+            . '.rr .tile span{color:var(--mut);font-size:clamp(11px,3.2cqw,13px)}'
+            . '.rr .tile b{font-size:clamp(14px,4.6cqw,20px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'
+            . '.rr .tile small{font-size:clamp(10px,2.8cqw,12px);color:var(--mut)}.rr .tile small.u{font-size:.6em;font-weight:normal}'
+            . '.rr .sec{font-size:clamp(10px,2.8cqw,12px);color:var(--mut);text-transform:uppercase;letter-spacing:.6px;margin-bottom:-4px}'
+            . '.rr .mts{display:grid;grid-template-columns:1fr 1fr;gap:clamp(5px,1.5cqh,9px) clamp(10px,3cqw,18px)}'
+            . '.rr .mtT{display:flex;justify-content:space-between;font-size:clamp(11px,3.2cqw,13px);color:var(--mut)}'
+            . '.rr .bar{height:6px;border-radius:3px;background:var(--trk);margin-top:3px;overflow:hidden}.rr .bar i{display:block;height:100%;border-radius:3px}'
+            . '.rr .rooms{display:flex;flex-wrap:wrap;gap:6px}'
+            . '.rr .room{border:1px solid var(--line);border-radius:14px;padding:2px 10px;font-size:clamp(11px,3cqw,13px);color:var(--mut)}'
+            . '.rr .room.on{color:' . $info . ';border-color:' . $info . '88;background:' . $info . '22;font-weight:600}'
+            . '.rr .row{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding-top:clamp(4px,1.3cqh,7px);border-top:1px solid var(--line);font-size:clamp(12px,3.4cqw,14px);margin-top:auto}'
+            . '.rr .row span{color:var(--mut)}.rr .row b{text-align:right;font-weight:600}'
+            . '@container (max-height:420px){.rr .rooms,.rr .rooms+*{display:none}}'
+            . '@container (max-height:330px){.rr .mts,.rr .sec{display:none}}'
             . '</style>';
 
-        return $css . '<div class="rw"><div class="rc">' . $icon
-            . '<div class="rn">' . $e(IPS_GetName($this->InstanceID)) . '</div>'
-            . '<div class="rt" style="color:' . $color . '">' . $e((string) $this->GetValue('StatusText')) . '</div>'
-            . '<div class="ru">' . $e(implode(' · ', $sub)) . '</div>'
-            . $html
-            . '<div class="rf">' . $e($this->Translate('Updated') . ' ' . date('H:i')) . '</div>'
-            . '</div></div>';
+        return $css . '<div class="rr"><div class="card"><div class="head"><span class="ttl">' . $icon . $e(IPS_GetName($this->InstanceID)) . '</span>' . $headChip . '</div>'
+            . '<div class="body">' . $hero . $alert . '<div class="tiles">' . $tiles . '</div>' . $maintenance . $rooms . $footer . '</div></div></div>';
     }
 
     private function RegisterProfiles(): void
