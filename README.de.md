@@ -179,8 +179,8 @@ verlinken und ihr eine große Kachel geben. Sie passt sich der Größe an:
 * **links:** großer Hauptknopf (*Räume reinigen (n)* bei Raumauswahl, sonst *Alles reinigen*; während der Reinigung
   *Pause*, bei unterbrochenem Auftrag *Fortsetzen*), Knöpfe *Stopp*, *Station*, *Finden*, Raumauswahl als Kacheln,
   Saugleistung / Wassermenge / Wischmodus als Auswahllisten, Durchgänge 1×/2×/3×
-* **rechts:** Akku-Ring und Zustand, Fehlerbanner, letzte Reinigung (Dauer, Fläche), Statistik, Wartungsbalken,
-  Verbindung und Uhrzeit der letzten Aktualisierung
+* **rechts:** Bild des Roboters (optionale Eigenschaft *Bild des Roboters*), Akku-Ring und Zustand, Fehlerbanner, letzte Reinigung (Dauer, Fläche), Statistik, Wartungsbalken,
+  Zeit der letzten Aktualisierung (auch als Variable *Letzte Aktualisierung*, nach jeder erfolgreichen Abfrage gesetzt)
 
 Bei schmaleren Kacheln steht die Karte oben und die beiden Spalten darunter, bei sehr kleinen Kacheln alles
 untereinander. Befehle gehen direkt an den Roboter (wie über die Variablen). Design wie bei der Statuskachel

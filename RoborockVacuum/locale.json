@@ -146,13 +146,14 @@
             "Cleaning tile": "Reinigungskachel",
             "Link this instance in the tile visualization: map in the middle, commands and room selection on the left, state, statistics and maintenance on the right.": "Diese Instanz in der Kachel-Visualisierung verlinken: Karte in der Mitte, links Befehle und Raumauswahl, rechts Zustand, Statistik und Wartung.",
             "Map (optional: HTML box with an image of the map, or image)": "Karte (optional: HTML-Box mit Kartenbild oder Bild)",
-            "Clean rooms": "Räume reinigen",
-            "Clean everything": "Alles reinigen",
             "Dock": "Station",
             "No map": "Keine Karte gewählt",
             "Duration": "Dauer",
             "Area": "Fläche",
-            "Statistics": "Statistik"
+            "Statistics": "Statistik",
+            "Picture of the robot (optional, image)": "Bild des Roboters (optional, Bild)",
+            "All rooms": "Alle Räume",
+            "Last update": "Letzte Aktualisierung"
         }
     }
 }

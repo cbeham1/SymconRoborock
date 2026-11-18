@@ -119,6 +119,7 @@ class RoborockCloudVacuum extends IPSModule
         $this->RegisterPropertyBoolean('ShowTile', true);
         $this->RegisterPropertyInteger('TileTheme', 0);
         $this->RegisterPropertyInteger('MapVariable', 0);
+        $this->RegisterPropertyInteger('RobotImage', 0);
 
         $this->RegisterAttributeString('Rooms', '[]');
         $this->RegisterAttributeBoolean('RoomsLoaded', false);
@@ -151,7 +152,7 @@ class RoborockCloudVacuum extends IPSModule
         if ($map > 0 && IPS_ObjectExists($map)) {
             $this->RegisterMessage($map, IPS_VariableExists($map) ? VM_UPDATE : MM_UPDATE);
         }
-        $this->UpdateVisualizationValue(json_encode(['mapOnly' => true, 'map' => $this->MapImage()]));
+        $this->UpdateVisualizationValue(json_encode(['mapOnly' => true, 'map' => $this->MapImage(), 'image' => $this->RobotImage()]));
         $this->UpdateTile();
 
         if ($this->ReadPropertyString('DUID') === '') {
@@ -167,7 +168,7 @@ class RoborockCloudVacuum extends IPSModule
     public function MessageSink($TimeStamp, $SenderID, $Message, $Data): void
     {
         if ($SenderID === $this->ReadPropertyInteger('MapVariable') && in_array($Message, [VM_UPDATE, MM_UPDATE], true)) {
-            $this->UpdateVisualizationValue(json_encode(['mapOnly' => true, 'map' => $this->MapImage()]));
+            $this->UpdateVisualizationValue(json_encode(['mapOnly' => true, 'map' => $this->MapImage(), 'image' => $this->RobotImage()]));
         }
     }
 
@@ -176,6 +177,7 @@ class RoborockCloudVacuum extends IPSModule
     {
         $data = $this->TileData();
         $data['map'] = $this->MapImage();
+        $data['image'] = $this->RobotImage();
         $json = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG);
         return str_replace('/*__DATA__*/null', $json, (string) file_get_contents(__DIR__ . '/tile.html'));
     }
@@ -307,6 +309,8 @@ class RoborockCloudVacuum extends IPSModule
         if ($this->ReadPropertyBoolean('ShowRooms') && !$this->ReadAttributeBoolean('RoomsLoaded') && $online) {
             $this->LoadRooms();
         }
+        // Time of the last successful update (the other values are only written when they change)
+        $this->SetValue('LastUpdate', time());
         if ($this->ReadPropertyBoolean('ShowTile')) {
             $this->SetValueIfChanged('Tile', $this->TileHTML());
         }
@@ -667,6 +671,7 @@ class RoborockCloudVacuum extends IPSModule
         $this->MaintainVariable('TaskOpen', $this->Translate('Cleaning task not finished'), VARIABLETYPE_BOOLEAN, '', 11, true);
         $this->MaintainVariable('Online', $this->Translate('Online'), VARIABLETYPE_BOOLEAN, '', 12, true);
         $this->MaintainVariable('Volume', $this->Translate('Volume'), VARIABLETYPE_INTEGER, '~Intensity.100', 13, true);
+        $this->MaintainVariable('LastUpdate', $this->Translate('Last update'), VARIABLETYPE_INTEGER, '~UnixTimestamp', 14, true);
         $this->EnableAction('Volume');
         $this->MaintainVariable('MainBrush', $this->Translate('Main brush'), VARIABLETYPE_INTEGER, 'RRV.Percent', 20, $consumables);
         $this->MaintainVariable('SideBrush', $this->Translate('Side brush'), VARIABLETYPE_INTEGER, 'RRV.Percent', 21, $consumables);
@@ -769,10 +774,10 @@ class RoborockCloudVacuum extends IPSModule
                 $stats[] = [IPS_GetName($id($ident)), $formatted($ident)];
             }
         }
-        $updated = $id('State') > 0 ? (int) IPS_GetVariable($id('State'))['VariableUpdated'] : 0;
+        $updated = (int) $value('LastUpdate');
         $texts = [];
-        foreach (['Pause', 'Resume', 'Clean rooms', 'Clean everything', 'Stop', 'Dock', 'Locate', 'Rooms', 'Settings', 'Passes', 'No map', 'Battery',
-            'Last cleaning', 'Duration', 'Area', 'Statistics', 'Maintenance', 'Online', 'Offline'] as $text) {
+        foreach (['Start', 'All rooms', 'Pause', 'Resume', 'Stop', 'Dock', 'Locate', 'Rooms', 'Settings', 'Passes', 'No map', 'Battery', 'Charging',
+            'Last cleaning', 'Duration', 'Area', 'Statistics', 'Maintenance', 'Offline', 'Last update'] as $text) {
             $texts[$text] = $this->Translate($text);
         }
         return [
@@ -796,7 +801,7 @@ class RoborockCloudVacuum extends IPSModule
             'rooms'     => $rooms,
             'parts'     => $parts,
             'stats'     => $stats,
-            'updated'   => $updated > 0 ? date('H:i', $updated) : '–',
+            'updated'   => $updated <= 0 ? '–' : (date('Ymd', $updated) === date('Ymd') ? date('H:i', $updated) : date('d.m. H:i', $updated)),
             'theme'     => $this->ReadPropertyInteger('TileTheme'),
             't'         => $texts,
         ];
@@ -824,6 +829,22 @@ class RoborockCloudVacuum extends IPSModule
             return 'data:image/svg+xml;base64,' . base64_encode($match[0]);
         }
         return '';
+    }
+
+    /** Picture of the robot for the cleaning tile (image media object) as data URL. */
+    private function RobotImage(): string
+    {
+        $media = $this->ReadPropertyInteger('RobotImage');
+        if ($media <= 0 || !IPS_MediaExists($media)) {
+            return '';
+        }
+        $content = IPS_GetMediaContent($media);
+        if ($content === '') {
+            return '';
+        }
+        $types = ['jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'png' => 'image/png', 'gif' => 'image/gif', 'webp' => 'image/webp', 'svg' => 'image/svg+xml'];
+        $extension = strtolower(pathinfo((string) IPS_GetMedia($media)['MediaFile'], PATHINFO_EXTENSION));
+        return 'data:' . ($types[$extension] ?? 'image/png') . ';base64,' . $content;
     }
 
     /** Status tile in card design: battery ring, state, settings, cleaning, maintenance bars, rooms. Sizes follow the tile (container units). */
