@@ -169,6 +169,23 @@ Schaltflächen: *Jetzt aktualisieren*, *Räume neu einlesen* (nach Umbenennen/Te
 18 Lüfterfehler, 22 Station nicht gefunden, 23 Rückkehr fehlgeschlagen, 24 Sperrzone, 27 VibraRise blockiert,
 28 Roboter auf Teppich, 29 Filter verstopft, 30 Unsichtbare Wand, 31 Teppich nicht überquerbar, 32 Interner Fehler.
 
+## Reinigungskachel
+
+Die Sauger-Instanz ist selbst eine Kachel der Kachel-Visualisierung (HTML-SDK, ab 1.8): die **Instanz** auf einer Seite
+verlinken und ihr eine große Kachel geben. Sie passt sich der Größe an:
+
+* **Mitte:** Karte – optionale Eigenschaft *Karte* (HTML-Box mit Kartenbild, z. B. aus einem Kartenskript, oder ein
+  Bildobjekt); ein Abzeichen zeigt den aktuellen Zustand
+* **links:** großer Hauptknopf (*Räume reinigen (n)* bei Raumauswahl, sonst *Alles reinigen*; während der Reinigung
+  *Pause*, bei unterbrochenem Auftrag *Fortsetzen*), Knöpfe *Stopp*, *Station*, *Finden*, Raumauswahl als Kacheln,
+  Saugleistung / Wassermenge / Wischmodus als Auswahllisten, Durchgänge 1×/2×/3×
+* **rechts:** Akku-Ring und Zustand, Fehlerbanner, letzte Reinigung (Dauer, Fläche), Statistik, Wartungsbalken,
+  Verbindung und Uhrzeit der letzten Aktualisierung
+
+Bei schmaleren Kacheln steht die Karte oben und die beiden Spalten darunter, bei sehr kleinen Kacheln alles
+untereinander. Befehle gehen direkt an den Roboter (wie über die Variablen). Design wie bei der Statuskachel
+(*Automatisch* folgt dem Design der Kachel-Visualisierung).
+
 ## Statuskachel
 
 * Kopf mit Symbol, Name und Zustands-Abzeichen (Reinigt / In der Station / Fehler / Offline)

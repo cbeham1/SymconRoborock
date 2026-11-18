@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+:root{--acc:#f39c12;--ok:#2ecc71;--warn:#f39c12;--bad:#e74c3c;--info:#4aa3ff}
+.rc{--bg1:#252b32;--bg2:#1a1e23;--bd:#343a41;--fg:#e8edf2;--mut:#9aa5b1;--soft:#ffffff0d;--soft2:#ffffff17;--line:#ffffff14;--mapbg:#14181c}
+.rc.vl{--bg1:#ffffff;--bg2:#eef1f4;--bd:#d5dbe1;--fg:#1f2933;--mut:#5b6672;--soft:#0000000a;--soft2:#00000014;--line:#00000014;--mapbg:#f3f5f7}
+html,body{margin:0!important;height:100%;background:transparent;overflow:hidden}
+*{box-sizing:border-box}
+.rc{height:100%;container-type:size;font-family:"Segoe UI",Arial,Helvetica,sans-serif;color:var(--fg)}
+.card{height:100%;display:grid;gap:12px;padding:12px;border-radius:14px;border:1px solid var(--bd);border-top:3px solid var(--st,var(--acc));
+  background:radial-gradient(90% 70% at 50% 0%,color-mix(in srgb,var(--st,var(--acc)) 10%,transparent),transparent 70%),linear-gradient(160deg,var(--bg1),var(--bg2));
+  grid-template-columns:minmax(220px,26%) 1fr minmax(220px,26%);grid-template-rows:minmax(0,1fr);grid-template-areas:"ctrl map info";overflow:hidden}
+.col{min-height:0;overflow:auto;display:flex;flex-direction:column;gap:10px;scrollbar-width:thin}
+.ctrl{grid-area:ctrl}.info{grid-area:info}
+.map{grid-area:map;position:relative;min-height:0;border-radius:12px;background:var(--mapbg);border:1px solid var(--line);overflow:hidden;
+  background-image:radial-gradient(var(--line) 1px,transparent 1px);background-size:14px 14px}
+.map img{position:absolute;inset:8px;width:calc(100% - 16px);height:calc(100% - 16px);object-fit:contain}
+.map .none{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--mut);font-size:13px;text-align:center;padding:12px}
+.map .none svg{width:64px;height:64px;stroke:var(--st,var(--acc));fill:none;stroke-width:1.4}
+.badge{position:absolute;left:10px;top:10px;display:flex;align-items:center;gap:7px;padding:5px 11px;border-radius:20px;background:color-mix(in srgb,var(--bg2) 85%,transparent);
+  border:1px solid var(--line);font-size:12px;font-weight:600;backdrop-filter:blur(4px)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--st,var(--acc));box-shadow:0 0 0 3px color-mix(in srgb,var(--st,var(--acc)) 30%,transparent)}
+.busy .dot{animation:pulse 1.6s infinite}
+@keyframes pulse{50%{box-shadow:0 0 0 7px transparent}}
+.sec{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);margin:2px 0 -4px}
+.go{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;padding:12px;border:0;border-radius:12px;cursor:pointer;
+  font-weight:700;font-size:15px;font-family:inherit;color:#fff;background:linear-gradient(135deg,var(--acc),color-mix(in srgb,var(--acc) 70%,#c0392b));box-shadow:0 4px 14px color-mix(in srgb,var(--acc) 35%,transparent)}
+.go:active{transform:scale(.98)}.go svg{width:18px;height:18px;fill:currentColor}
+.go small{font-weight:500;opacity:.85}
+.tools{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.tool{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;border-radius:10px;border:1px solid var(--line);background:var(--soft);color:var(--fg);
+  font-weight:600;font-size:11px;font-family:inherit;cursor:pointer}
+.tool svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.tool:hover,.room:hover{background:var(--soft2)}
+.rooms{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:6px}
+.room{position:relative;padding:8px 9px 8px 28px;border-radius:9px;border:1px solid var(--line);background:var(--soft);color:var(--fg);
+  font-weight:600;font-size:12px;font-family:inherit;text-align:left;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.room:before{content:"";position:absolute;left:9px;top:50%;width:12px;height:12px;margin-top:-6px;border-radius:4px;border:2px solid var(--mut)}
+.room.on{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 16%,transparent)}
+.room.on:before{border-color:var(--acc);background:var(--acc) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.2l2.3 2.3 4.7-5' stroke='%23fff' stroke-width='2' fill='none'/%3E%3C/svg%3E") center/10px no-repeat}
+.sel{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:6px 10px;font-size:12px}
+.sel label{color:var(--mut)}
+.sel select{width:100%;padding:6px 26px 6px 9px;border-radius:8px;border:1px solid var(--line);background:var(--soft);color:var(--fg);font-weight:600;font-size:12px;font-family:inherit;
+  appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%239aa5b1' stroke-width='1.6' fill='none'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 9px center;background-size:10px}
+.sel select option{color:#1f2933}
+.seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{flex:1;padding:6px 0;border:0;background:transparent;color:var(--fg);font-weight:600;font-size:12px;font-family:inherit;cursor:pointer}
+.seg button.on{background:var(--acc);color:#fff}
+.hero{display:flex;align-items:center;gap:12px}
+.ring{width:84px;height:84px;flex:none}
+.ring .trk{stroke:var(--line)}.ring text{fill:var(--fg);font-weight:700;font-size:21px}.ring .s{fill:var(--mut);font-size:9px;font-weight:400}
+.state{font-size:17px;font-weight:700;line-height:1.25}
+.sub{font-size:12px;color:var(--mut);margin-top:3px}
+.err{padding:8px 10px;border-radius:9px;background:color-mix(in srgb,var(--bad) 18%,transparent);border:1px solid color-mix(in srgb,var(--bad) 50%,transparent);font-size:12px;font-weight:600}
+.kv{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.kv div{padding:7px 9px;border-radius:9px;background:var(--soft);border:1px solid var(--line);min-width:0}
+.kv span{display:block;font-size:10.5px;color:var(--mut)}.kv b{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar{display:grid;grid-template-columns:1fr auto;gap:3px 8px;font-size:12px}
+.bar i{grid-column:1/3;height:5px;border-radius:3px;background:var(--line);overflow:hidden}.bar i b{display:block;height:100%;border-radius:3px}
+.foot{margin-top:auto;font-size:11px;color:var(--mut);display:flex;align-items:center;gap:6px}
+.foot .dot{width:7px;height:7px;box-shadow:none}
+@container (max-width:860px){.card{grid-template-columns:1fr 1fr;grid-template-rows:minmax(160px,45%) minmax(0,1fr);grid-template-areas:"map map" "ctrl info"}}
+@container (max-width:540px){.card{grid-template-columns:1fr;grid-template-rows:auto minmax(180px,1fr) auto;grid-template-areas:"info" "map" "ctrl";overflow:auto}
+  .col{overflow:visible}.info .kv,.info .bars,.info .sec.opt{display:none}}
+</style>
+</head>
+<body>
+<div class="rc" id="rc"><div class="card" id="card">
+  <div class="col ctrl" id="ctrl"></div>
+  <div class="map" id="map"></div>
+  <div class="col info" id="info"></div>
+</div></div>
+<script>
+// D: tile data of the module (see TileData() in module.php); updates arrive via handleMessage
+let D = /*__DATA__*/null;
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+const T = k => (D.t && D.t[k]) || k;
+const act = (ident, value) => { if (typeof requestAction === 'function') requestAction(ident, value); };
+const ICON = {
+  play: '<svg viewBox="0 0 24 24"><path d="M7 4.5v15l12.5-7.5z"/></svg>',
+  pause: '<svg viewBox="0 0 24 24"><path d="M6 4h4.5v16H6zM13.5 4H18v16h-4.5z"/></svg>',
+  stop: '<svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>',
+  dock: '<svg viewBox="0 0 24 24"><path d="M4 11l8-6.5 8 6.5M6.5 9.5V19h11V9.5M10 19v-5h4v5"/></svg>',
+  find: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3"/><circle cx="12" cy="12" r="7.5"/></svg>',
+  robot: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/><path d="M5 8.5h14"/></svg>'
+};
+
+function color() {
+  if (!D.online) return '#8a96a3';
+  if (D.error > 0) return 'var(--bad)';
+  if (D.cleaning) return 'var(--info)';
+  if (D.charging || D.docked) return 'var(--ok)';
+  return 'var(--warn)';
+}
+
+function select(ident, opt) {
+  if (!opt) return '';
+  return '<label>' + esc(opt.label) + '</label><select data-ident="' + ident + '">'
+    + opt.options.map(o => '<option value="' + o[0] + '"' + (o[0] === opt.value ? ' selected' : '') + '>' + esc(o[1]) + '</option>').join('') + '</select>';
+}
+
+function renderCtrl() {
+  const chosen = D.rooms.filter(r => r.on);
+  let primary;
+  if (D.cleaning) primary = '<button class="go" data-ctrl="2">' + ICON.pause + T('Pause') + '</button>';
+  else if (D.taskOpen || D.state === 10) primary = '<button class="go" data-ctrl="5">' + ICON.play + T('Resume') + '</button>';
+  else if (chosen.length) primary = '<button class="go" data-ctrl="6">' + ICON.play + T('Clean rooms') + ' <small>(' + chosen.length + ')</small></button>';
+  else primary = '<button class="go" data-ctrl="1">' + ICON.play + T('Clean everything') + '</button>';
+  let h = primary + '<div class="tools">'
+    + '<button class="tool" data-ctrl="3">' + ICON.stop + T('Stop') + '</button>'
+    + '<button class="tool" data-ctrl="4">' + ICON.dock + T('Dock') + '</button>'
+    + '<button class="tool" data-ctrl="7">' + ICON.find + T('Locate') + '</button></div>';
+  if (D.rooms.length) {
+    h += '<div class="sec">' + T('Rooms') + '</div><div class="rooms">'
+      + D.rooms.map(r => '<button class="room' + (r.on ? ' on' : '') + '" data-room="' + r.ident + '" title="' + esc(r.name) + '">' + esc(r.name) + '</button>').join('') + '</div>';
+  }
+  h += '<div class="sec">' + T('Settings') + '</div><div class="sel">' + select('FanPower', D.fan) + select('WaterMode', D.water) + select('MopMode', D.mop);
+  if (D.repeat !== null) {
+    h += '<label>' + T('Passes') + '</label><div class="seg">' + [1, 2, 3].map(n => '<button data-repeat="' + n + '" class="' + (D.repeat === n ? 'on' : '') + '">' + n + '×</button>').join('') + '</div>';
+  }
+  $('ctrl').innerHTML = h + '</div>';
+}
+
+function renderMap() {
+  const badge = '<div class="badge"><span class="dot"></span>' + esc(D.status) + '</div>';
+  $('map').innerHTML = D.map ? '<img alt="" src="' + D.map + '">' + badge
+    : '<div class="none">' + ICON.robot + '<div>' + esc(D.status) + '</div><div>' + T('No map') + '</div></div>';
+}
+
+function renderInfo() {
+  const r = 34, c = 2 * Math.PI * r, p = Math.max(0, Math.min(100, D.battery));
+  const bc = p < 20 ? 'var(--bad)' : (p < 40 ? 'var(--warn)' : 'var(--ok)');
+  let h = '<div class="hero"><svg class="ring" viewBox="0 0 84 84"><circle class="trk" cx="42" cy="42" r="' + r + '" fill="none" stroke-width="7"/>'
+    + '<circle cx="42" cy="42" r="' + r + '" fill="none" stroke="' + bc + '" stroke-width="7" stroke-linecap="round" stroke-dasharray="' + (c * p / 100) + ' ' + c + '" transform="rotate(-90 42 42)"/>'
+    + '<text x="42" y="45" text-anchor="middle">' + p + '%</text><text class="s" x="42" y="58" text-anchor="middle">' + T('Battery') + '</text></svg>'
+    + '<div><div class="state">' + esc(D.status) + '</div><div class="sub">' + esc(D.name) + '</div></div></div>';
+  if (D.error > 0) h += '<div class="err">' + esc(D.errorText) + '</div>';
+  h += '<div class="sec opt">' + T('Last cleaning') + '</div><div class="kv"><div><span>' + T('Duration') + '</span><b>' + esc(D.cleanTime) + '</b></div>'
+    + '<div><span>' + T('Area') + '</span><b>' + esc(D.cleanArea) + '</b></div></div>';
+  if (D.stats.length) {
+    h += '<div class="sec opt">' + T('Statistics') + '</div><div class="kv">' + D.stats.map(s => '<div><span>' + esc(s[0]) + '</span><b>' + esc(s[1]) + '</b></div>').join('') + '</div>';
+  }
+  if (D.parts.length) {
+    h += '<div class="sec opt">' + T('Maintenance') + '</div><div class="bars">' + D.parts.map(s => {
+      const col = s[1] < 10 ? 'var(--bad)' : (s[1] < 25 ? 'var(--warn)' : 'var(--ok)');
+      return '<div class="bar" style="margin-bottom:6px"><span>' + esc(s[0]) + '</span><b>' + s[1] + ' %</b><i><b style="width:' + s[1] + '%;background:' + col + '"></b></i></div>';
+    }).join('') + '</div>';
+  }
+  h += '<div class="foot"><span class="dot" style="background:' + (D.online ? 'var(--ok)' : '#8a96a3') + '"></span>' + esc(D.online ? T('Online') : T('Offline')) + ' · ' + esc(D.updated) + '</div>';
+  $('info').innerHTML = h;
+}
+
+function render() {
+  if (!D) return;
+  $('card').style.setProperty('--st', color());
+  $('card').classList.toggle('busy', !!D.cleaning);
+  renderCtrl(); renderMap(); renderInfo();
+}
+
+// Design: automatic follows the card/text colors of the tile visualization (html-sdk), otherwise prefers-color-scheme
+function theme() {
+  const rc = $('rc');
+  if (D.theme === 1) return;
+  if (D.theme === 2) { rc.classList.add('vl'); return; }
+  const s = getComputedStyle(document.documentElement);
+  const lum = n => { let v = s.getPropertyValue(n).replace(/[^0-9a-f]/gi, ''); if (v.length < 6) return -1;
+    v = v.length === 8 && /^ff/i.test(v) ? v.slice(2) : v.slice(0, 6); const c = parseInt(v, 16); return 0.299 * (c >> 16) + 0.587 * (c >> 8 & 255) + 0.114 * (c & 255); };
+  const b = lum('--card-color'), f = lum('--content-color');
+  rc.classList.toggle('vl', b < 0 ? matchMedia('(prefers-color-scheme: light)').matches : b >= (f < 0 ? 128 : f));
+}
+
+document.addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  if (b.dataset.ctrl) act('Control', parseInt(b.dataset.ctrl, 10));
+  else if (b.dataset.room) { const r = D.rooms.find(x => x.ident === b.dataset.room); if (r) { r.on = !r.on; renderCtrl(); act(r.ident, r.on); } }
+  else if (b.dataset.repeat) { D.repeat = parseInt(b.dataset.repeat, 10); renderCtrl(); act('Repeat', D.repeat); }
+});
+document.addEventListener('change', e => {
+  const s = e.target.closest('select');
+  if (s) act(s.dataset.ident, parseInt(s.value, 10));
+});
+
+function handleMessage(data) {
+  const u = typeof data === 'string' ? JSON.parse(data) : data;
+  // The map is only sent when it has changed (own message), otherwise the previous map is kept
+  if (u.mapOnly) { D.map = u.map; renderMap(); return; }
+  u.map = D.map;
+  D = u; render();
+}
+
+if (D) { theme(); render(); }
+</script>
+</body>
+</html>

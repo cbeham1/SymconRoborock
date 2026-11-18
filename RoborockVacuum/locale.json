@@ -142,7 +142,17 @@
             "Clean selected rooms": "Ausgewählte Räume reinigen",
             "Locate": "Orten",
             "Empty dust bin": "Staubbehälter entleeren",
-            "Wash mop": "Mopp waschen"
+            "Wash mop": "Mopp waschen",
+            "Cleaning tile": "Reinigungskachel",
+            "Link this instance in the tile visualization: map in the middle, commands and room selection on the left, state, statistics and maintenance on the right.": "Diese Instanz in der Kachel-Visualisierung verlinken: Karte in der Mitte, links Befehle und Raumauswahl, rechts Zustand, Statistik und Wartung.",
+            "Map (optional: HTML box with an image of the map, or image)": "Karte (optional: HTML-Box mit Kartenbild oder Bild)",
+            "Clean rooms": "Räume reinigen",
+            "Clean everything": "Alles reinigen",
+            "Dock": "Station",
+            "No map": "Keine Karte gewählt",
+            "Duration": "Dauer",
+            "Area": "Fläche",
+            "Statistics": "Statistik"
         }
     }
 }

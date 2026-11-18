@@ -94,6 +94,11 @@ dirty, 16 robot tilted, 17 side brush error, 18 fan error, 21 vertical bumper, 2
 | robot does not answer | state/battery/error from the cloud device list (max. 5 min old), *Online* = false |
 | 4 s after every command | `get_status` |
 
+## Cleaning tile
+
+The instance is a tile of the tile visualization (HTML-SDK): link the instance; optional property *Map* (HTML box with
+an image of the map, or image). See the [main README](../README.md#cleaning-tile).
+
 ## Status tile
 
 See the [main README](../README.md#status-tile). The tile is rebuilt after every update and immediately after a

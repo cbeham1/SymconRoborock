@@ -141,6 +141,23 @@ Not both at the same time – the store reports a conflict otherwise.
 The protocol was reimplemented following the open source project
 [python-roborock](https://github.com/Python-roborock/python-roborock). No code of that project is included.
 
+## Cleaning tile
+
+The vacuum instance itself is a tile of the tile visualization (HTML-SDK, since 1.8): link the **instance** on a page
+and give it a large tile. It adapts to its size:
+
+* **middle:** map – optional property *Map* (an HTML box containing an image of the map, e.g. from a map script, or an
+  image object); a badge shows the current state
+* **left:** big main button (*Clean rooms (n)* with selected rooms, otherwise *Clean everything*; *Pause* while
+  cleaning, *Resume* for an interrupted task), buttons *Stop*, *Dock*, *Locate*, room selection as tiles,
+  suction power / water flow / mop mode as selection lists, passes 1×/2×/3×
+* **right:** battery ring and state, error banner, last cleaning (duration, area), statistics, maintenance bars,
+  connection and time of the last update
+
+Narrower tiles put the map on top and the two columns below; on very small tiles everything is stacked. Commands go
+directly to the robot (same as the variables). Design as for the status tile (*Automatic* follows the design of the
+tile visualization).
+
 ## Status tile
 
 When *"Create status tile"* is enabled, the vacuum instance writes an HTML variable **"Status tile"** (`~HTMLBox`):

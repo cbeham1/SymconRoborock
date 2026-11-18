@@ -118,6 +118,7 @@ class RoborockCloudVacuum extends IPSModule
         $this->RegisterPropertyBoolean('ShowStatistics', true);
         $this->RegisterPropertyBoolean('ShowTile', true);
         $this->RegisterPropertyInteger('TileTheme', 0);
+        $this->RegisterPropertyInteger('MapVariable', 0);
 
         $this->RegisterAttributeString('Rooms', '[]');
         $this->RegisterAttributeBoolean('RoomsLoaded', false);
@@ -127,6 +128,9 @@ class RoborockCloudVacuum extends IPSModule
         $this->RegisterAttributeString('Model', '');
 
         $this->RegisterTimer('Update', 0, 'RRV_Update($_IPS[\'TARGET\']);');
+
+        // Cleaning tile: the instance itself is a tile of the tile visualization (HTML-SDK)
+        $this->SetVisualizationType(1);
     }
 
     public function ApplyChanges(): void
@@ -137,6 +141,19 @@ class RoborockCloudVacuum extends IPSModule
         $this->MaintainVariables();
         $this->WriteAttributeInteger('UpdateCount', 0);
 
+        // Map of the cleaning tile: follow changes of the selected variable
+        foreach ($this->GetMessageList() as $sender => $messages) {
+            foreach ($messages as $message) {
+                $this->UnregisterMessage($sender, $message);
+            }
+        }
+        $map = $this->ReadPropertyInteger('MapVariable');
+        if ($map > 0 && IPS_ObjectExists($map)) {
+            $this->RegisterMessage($map, IPS_VariableExists($map) ? VM_UPDATE : MM_UPDATE);
+        }
+        $this->UpdateVisualizationValue(json_encode(['mapOnly' => true, 'map' => $this->MapImage()]));
+        $this->UpdateTile();
+
         if ($this->ReadPropertyString('DUID') === '') {
             $this->SetTimerInterval('Update', 0);
             $this->SetStatus(self::STATUS_NO_DEVICE);
@@ -145,6 +162,22 @@ class RoborockCloudVacuum extends IPSModule
         $this->SetStatus(IS_ACTIVE);
         // First update shortly after the changes are applied; Update() sets the regular interval
         $this->SetTimerInterval('Update', self::FIRST_UPDATE_DELAY * 1000);
+    }
+
+    public function MessageSink($TimeStamp, $SenderID, $Message, $Data): void
+    {
+        if ($SenderID === $this->ReadPropertyInteger('MapVariable') && in_array($Message, [VM_UPDATE, MM_UPDATE], true)) {
+            $this->UpdateVisualizationValue(json_encode(['mapOnly' => true, 'map' => $this->MapImage()]));
+        }
+    }
+
+    /** Cleaning tile (HTML-SDK): map in the middle, commands and selection on the left, state, statistics and maintenance on the right. */
+    public function GetVisualizationTile(): string
+    {
+        $data = $this->TileData();
+        $data['map'] = $this->MapImage();
+        $json = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG);
+        return str_replace('/*__DATA__*/null', $json, (string) file_get_contents(__DIR__ . '/tile.html'));
     }
 
     public function ReceiveData($JSONString): string
@@ -190,10 +223,11 @@ class RoborockCloudVacuum extends IPSModule
         if (!$ok) {
             echo $this->Translate('Command failed, see debug output / log');
         }
-        // Room selection and settings are shown in the tile at once
+        // Room selection and settings are shown in the tiles at once
         if ($this->ReadPropertyBoolean('ShowTile')) {
             $this->SetValueIfChanged('Tile', $this->TileHTML());
         }
+        $this->UpdateTile();
     }
 
     /** Reads the status (and every 30th time the consumables) and updates the variables. */
@@ -276,6 +310,7 @@ class RoborockCloudVacuum extends IPSModule
         if ($this->ReadPropertyBoolean('ShowTile')) {
             $this->SetValueIfChanged('Tile', $this->TileHTML());
         }
+        $this->UpdateTile();
         return true;
     }
 
@@ -684,6 +719,110 @@ class RoborockCloudVacuum extends IPSModule
                 $this->MaintainVariable($ident, '', VARIABLETYPE_BOOLEAN, '', 0, false);
             }
         }
+    }
+
+    /** Sends the current values to open cleaning tiles (without the map, which has its own message). */
+    private function UpdateTile(): void
+    {
+        $this->UpdateVisualizationValue(json_encode($this->TileData(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+    }
+
+    /** Values of the cleaning tile; selections with the options of their profiles. */
+    private function TileData(): array
+    {
+        $id = fn (string $ident): int => (int) @$this->GetIDForIdent($ident);
+        $value = fn (string $ident) => $id($ident) > 0 ? $this->GetValue($ident) : null;
+        $formatted = fn (string $ident): string => $id($ident) > 0 ? GetValueFormatted($id($ident)) : '–';
+        $options = function (string $ident) use ($id): ?array {
+            $vid = $id($ident);
+            if ($vid === 0) {
+                return null;
+            }
+            $variable = IPS_GetVariable($vid);
+            $profile = $variable['VariableCustomProfile'] !== '' ? $variable['VariableCustomProfile'] : $variable['VariableProfile'];
+            $list = [];
+            if (IPS_VariableProfileExists($profile)) {
+                foreach (IPS_GetVariableProfile($profile)['Associations'] as $association) {
+                    $list[] = [(int) $association['Value'], (string) $association['Name']];
+                }
+            }
+            return ['label' => IPS_GetName($vid), 'value' => (int) $this->GetValue($ident), 'options' => $list];
+        };
+        $state = (int) $value('State');
+        $rooms = [];
+        foreach (json_decode($this->ReadAttributeString('Rooms'), true) ?: [] as $room) {
+            $ident = 'Room' . (int) $room['segment'];
+            if ($id($ident) > 0) {
+                $rooms[] = ['ident' => $ident, 'name' => (string) $room['name'], 'on' => (bool) $this->GetValue($ident)];
+            }
+        }
+        $parts = [];
+        foreach (['MainBrush', 'SideBrush', 'Filter', 'Sensors'] as $ident) {
+            if ($id($ident) > 0) {
+                $parts[] = [IPS_GetName($id($ident)), (int) $this->GetValue($ident)];
+            }
+        }
+        $stats = [];
+        foreach (['TotalArea', 'TotalTime', 'TotalCount'] as $ident) {
+            if ($id($ident) > 0) {
+                $stats[] = [IPS_GetName($id($ident)), $formatted($ident)];
+            }
+        }
+        $updated = $id('State') > 0 ? (int) IPS_GetVariable($id('State'))['VariableUpdated'] : 0;
+        $texts = [];
+        foreach (['Pause', 'Resume', 'Clean rooms', 'Clean everything', 'Stop', 'Dock', 'Locate', 'Rooms', 'Settings', 'Passes', 'No map', 'Battery',
+            'Last cleaning', 'Duration', 'Area', 'Statistics', 'Maintenance', 'Online', 'Offline'] as $text) {
+            $texts[$text] = $this->Translate($text);
+        }
+        return [
+            'name'      => IPS_GetName($this->InstanceID),
+            'online'    => (bool) $value('Online'),
+            'state'     => $state,
+            'status'    => (string) $value('StatusText'),
+            'battery'   => (int) $value('Battery'),
+            'error'     => (int) $value('Error'),
+            'errorText' => $this->ErrorText((int) $value('Error')),
+            'cleaning'  => in_array($state, self::CLEANING_STATES, true),
+            'charging'  => $state === 8,
+            'docked'    => in_array($state, [8, 22, 23, 100], true),
+            'taskOpen'  => (bool) $value('TaskOpen'),
+            'cleanTime' => $formatted('CleanTime'),
+            'cleanArea' => $formatted('CleanArea'),
+            'fan'       => $options('FanPower'),
+            'water'     => $options('WaterMode'),
+            'mop'       => $options('MopMode'),
+            'repeat'    => $id('Repeat') > 0 ? (int) $this->GetValue('Repeat') : null,
+            'rooms'     => $rooms,
+            'parts'     => $parts,
+            'stats'     => $stats,
+            'updated'   => $updated > 0 ? date('H:i', $updated) : '–',
+            'theme'     => $this->ReadPropertyInteger('TileTheme'),
+            't'         => $texts,
+        ];
+    }
+
+    /** Image of the selected map variable as data URL: image in an HTML box (img src or svg), or image media object. */
+    private function MapImage(): string
+    {
+        $map = $this->ReadPropertyInteger('MapVariable');
+        if ($map <= 0) {
+            return '';
+        }
+        if (IPS_MediaExists($map)) {
+            $content = IPS_GetMediaContent($map);
+            return $content === '' ? '' : 'data:image/png;base64,' . $content;
+        }
+        if (!IPS_VariableExists($map) || IPS_GetVariable($map)['VariableType'] !== VARIABLETYPE_STRING) {
+            return '';
+        }
+        $html = (string) GetValueString($map);
+        if (preg_match('/<img[^>]+src="(data:image\/[^"]+)"/i', $html, $match)) {
+            return $match[1];
+        }
+        if (preg_match('/<svg.*<\/svg>/is', $html, $match)) {
+            return 'data:image/svg+xml;base64,' . base64_encode($match[0]);
+        }
+        return '';
     }
 
     /** Status tile in card design: battery ring, state, settings, cleaning, maintenance bars, rooms. Sizes follow the tile (container units). */

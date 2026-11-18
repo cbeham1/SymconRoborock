@@ -57,6 +57,21 @@
                     ]
                 }
             ]
+        },
+        {
+            "type": "ExpansionPanel",
+            "caption": "Cleaning tile",
+            "items": [
+                {
+                    "type": "Label",
+                    "caption": "Link this instance in the tile visualization: map in the middle, commands and room selection on the left, state, statistics and maintenance on the right."
+                },
+                {
+                    "type": "SelectObject",
+                    "name": "MapVariable",
+                    "caption": "Map (optional: HTML box with an image of the map, or image)"
+                }
+            ]
         }
     ],
     "actions": [
