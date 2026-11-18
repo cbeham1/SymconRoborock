@@ -13,7 +13,7 @@ sends commands. Create it with the [configurator](../RoborockConfigurator/README
 | Consumables | on | Remaining lifetime of main brush, side brush, filter and sensors (read every 30th update) |
 | Cleaning statistics | on | Total area, total time, number of cleanings (read every 30th update) |
 | Create status tile | on | HTML variable *Status tile* for the tile visualization |
-| Design | Automatic | Automatic (follows light/dark mode of the viewing device), Dark or Light |
+| Design | Automatic | Automatic (follows the design of the tile visualization, elsewhere the light/dark mode of the device), Dark or Light |
 
 Buttons in the form: **Update now**, **Reload rooms** (after renaming or splitting rooms in the app), **Locate robot**.
 

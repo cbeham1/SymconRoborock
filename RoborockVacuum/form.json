@@ -43,7 +43,7 @@
                     "caption": "Design",
                     "options": [
                         {
-                            "caption": "Automatic (light/dark like the device)",
+                            "caption": "Automatic (design of the visualization)",
                             "value": 0
                         },
                         {

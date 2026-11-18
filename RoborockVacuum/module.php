@@ -805,13 +805,13 @@ class RoborockCloudVacuum extends IPSModule
 
         $footer = '<div class="row"><span>' . $e($t('Connection')) . '</span><b>' . $e($t($online ? 'Online' : 'Offline') . ' · ' . $t('Updated') . ' ' . date('H:i')) . '</b></div>';
 
-        // Theme 0 = automatic (prefers-color-scheme), 1 = dark, 2 = light
+        // Theme 0 = automatic (design of the visualization, see ThemeScript), 1 = dark, 2 = light
         $dark = '--bg1:#252b32;--bg2:#1a1e23;--bd:#343a41;--fg:#e8edf2;--mut:#9aa5b1;--soft:#ffffff0d;--soft2:#ffffff0a;--line:#ffffff14;--trk:#ffffff14';
         $light = '--bg1:#ffffff;--bg2:#eef1f4;--bd:#d5dbe1;--fg:#1f2933;--mut:#5b6672;--soft:#0000000a;--soft2:#00000008;--line:#00000014;--trk:#00000014';
         $theme = $this->ReadPropertyInteger('TileTheme');
         $vars = '.rr{' . ($theme === 2 ? $light : $dark) . '}';
         if ($theme === 0) {
-            $vars .= '@media (prefers-color-scheme: light){.rr{' . $light . '}}';
+            $vars .= '@media (prefers-color-scheme: light){.rr:not(.vd){' . $light . '}}.rr.vl{' . $light . '}';
         }
         $css = '<style>'
             . 'html,body{height:100%;margin:0;overflow:hidden;background:transparent}'
@@ -851,7 +851,18 @@ class RoborockCloudVacuum extends IPSModule
             . '</style>';
 
         return $css . '<div class="rr"><div class="card"><div class="head"><span class="ttl">' . $icon . $e(IPS_GetName($this->InstanceID)) . '</span>' . $headChip . '</div>'
-            . '<div class="body">' . $hero . $alert . '<div class="tiles">' . $tiles . '</div>' . $maintenance . $rooms . $footer . '</div></div></div>';
+            . '<div class="body">' . $hero . $alert . '<div class="tiles">' . $tiles . '</div>' . $maintenance . $rooms . $footer . '</div></div></div>'
+            . ($theme === 0 ? $this->ThemeScript('rr') : '');
+    }
+
+    /** Automatic design: follows the card/text colors that the tile visualization passes to HTML content, otherwise prefers-color-scheme. */
+    private function ThemeScript(string $class): string
+    {
+        return '<script>(function(){var s=getComputedStyle(document.documentElement);'
+            . 'function l(n){var v=s.getPropertyValue(n).replace(/[^0-9a-f]/gi,"");if(v.length<6){return -1;}'
+            . 'v=v.length===8&&/^ff/i.test(v)?v.slice(2):v.slice(0,6);var c=parseInt(v,16);return 0.299*(c>>16)+0.587*(c>>8&255)+0.114*(c&255);}'
+            . 'var b=l("--card-color"),f=l("--content-color");if(b<0){return;}'
+            . 'document.querySelectorAll(".' . $class . '").forEach(function(e){e.classList.add(b<(f<0?128:f)?"vd":"vl");});})();</script>';
     }
 
     private function RegisterProfiles(): void

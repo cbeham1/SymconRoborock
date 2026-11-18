@@ -116,7 +116,7 @@ doppelt angelegt.
 | Verschleißteile | an | Restlaufzeit in %, jede 30. Abfrage |
 | Reinigungsstatistik | an | Summen, jede 30. Abfrage |
 | Statuskachel erstellen | an | HTML-Variable *Statuskachel* |
-| Design | Automatisch | Automatisch (wie das Anzeigegerät), Dunkel, Hell |
+| Design | Automatisch | Automatisch (wie das Design der Kachel-Visualisierung, sonst wie das Anzeigegerät), Dunkel, Hell |
 
 Schaltflächen: *Jetzt aktualisieren*, *Räume neu einlesen* (nach Umbenennen/Teilen von Räumen in der App),
 *Roboter orten*.
