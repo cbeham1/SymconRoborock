@@ -163,7 +163,12 @@
             "Map %d": "Karte %d",
             "Rotate map": "Karte drehen",
             "Reset": "Zurücksetzen",
-            "Sure?": "Sicher?"
+            "Sure?": "Sicher?",
+            "Own names (empty = name from the Roborock app) and which rooms are shown. Rooms are read with \"Reload rooms\".": "Eigene Namen (leer = Name aus der Roborock-App) und welche Räume angezeigt werden. Räume werden mit „Räume neu einlesen“ gelesen.",
+            "Segment": "Segment",
+            "Name in the app": "Name in der App",
+            "Own name": "Eigener Name",
+            "Show": "Anzeigen"
         }
     }
 }

@@ -48,6 +48,7 @@ html,body{margin:0!important;height:100%;background:transparent;overflow:hidden}
 .room.on{border-color:var(--pc);background:color-mix(in srgb,var(--pc) 26%,transparent)}
 .room.on:before{border-color:var(--pc);background:var(--pc) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.2l2.3 2.3 4.7-5' stroke='%23fff' stroke-width='2' fill='none'/%3E%3C/svg%3E") center/.8em no-repeat}
 .set{display:flex;flex-direction:column;gap:.45em}
+.gap{height:.4em}
 .set label{font-size:.85em;color:var(--mut)}
 .opts{display:flex;flex-wrap:wrap;gap:.55em}
 .opts button{flex:1 1 auto;min-height:2.6em;padding:.4em .9em;border-radius:.6em;border:1px solid color-mix(in srgb,var(--pc) 28%,transparent);
@@ -61,10 +62,11 @@ html,body{margin:0!important;height:100%;background:transparent;overflow:hidden}
 .map{grid-area:map;position:relative;min-height:0;border-radius:1em;background:var(--mapbg);border:1px solid var(--line);overflow:hidden;
   background-image:radial-gradient(var(--line) 1px,transparent 1px);background-size:1em 1em}
 .map{container-type:size}
-.map img{position:absolute;inset:.6em;width:calc(100% - 1.2em);height:calc(100% - 1.2em);object-fit:contain}
+.map .mimg{position:absolute;inset:.6em;width:calc(100% - 1.2em);height:calc(100% - 1.2em);object-fit:contain}
+.map div.mimg svg{width:100%;height:100%;display:block}
 /* Rotated map: for 90/270 degrees the image box swaps width and height of the map area */
-.map img.r90,.map img.r270{inset:auto;left:50%;top:50%;width:calc(100cqh - 1.2em);height:calc(100cqw - 1.2em)}
-.map img.r90{transform:translate(-50%,-50%) rotate(90deg)}.map img.r270{transform:translate(-50%,-50%) rotate(270deg)}.map img.r180{transform:rotate(180deg)}
+.map .mimg.r90,.map .mimg.r270{inset:auto;left:50%;top:50%;width:calc(100cqh - 1.2em);height:calc(100cqw - 1.2em)}
+.map .mimg.r90{transform:translate(-50%,-50%) rotate(90deg)}.map .mimg.r270{transform:translate(-50%,-50%) rotate(270deg)}.map .mimg.r180{transform:rotate(180deg)}
 .map .none{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.6em;color:var(--mut);text-align:center;padding:1em}
 .map .none img{position:static;width:auto;height:auto;max-width:70%;max-height:60%}
 .map .none svg{width:60%;max-height:55%}
@@ -181,7 +183,7 @@ function renderCtrl() {
     h += '<div class="sec">' + T('Rooms') + '</div><div class="rooms">'
       + D.rooms.map((r, i) => '<button class="room' + (r.on ? ' on' : '') + '" style="--pc:' + ROOM[i % ROOM.length] + '" data-room="' + r.ident + '" title="' + esc(r.name) + '">' + esc(r.name) + '</button>').join('') + '</div>';
   }
-  h += '<div class="sec">' + T('Settings') + '</div>' + options('FanPower', D.fan) + options('WaterMode', D.water) + options('MopMode', D.mop);
+  h += '<div class="gap"></div>' + options('FanPower', D.fan) + options('WaterMode', D.water) + options('MopMode', D.mop);
   if (D.repeat !== null) {
     h += '<div class="set" style="--pc:' + GROUP.Repeat + '"><label>' + T('Passes') + '</label><div class="opts">' + [1, 2, 3].map(n => '<button data-repeat="' + n + '" class="' + (D.repeat === n ? 'on' : '') + '">' + n + '×</button>').join('') + '</div></div>';
   }
@@ -193,8 +195,35 @@ function renderMap() {
   let floors = '';
   if (D.floors.length > 1) floors = '<div class="floors">' + D.floors.map(f => '<button data-floor="' + f[0] + '" class="' + (f[0] === D.floor ? 'on' : '') + '">' + esc(f[1]) + '</button>').join('') + '</div>';
   else if (D.floors.length === 1 && D.floors[0][1]) floors = '<div class="floors"><span>' + esc(D.floors[0][1]) + '</span></div>';
-  $('map').innerHTML = floors + (D.map ? '<img alt="" class="' + (D.rotation ? 'r' + D.rotation : '') + '" src="' + D.map + '">'
+  $('map').innerHTML = floors + (D.map ? mapImage()
     : '<div class="none">' + picture() + '<div>' + T('No map') + '</div></div>');
+}
+
+// Rotated SVG map: embed the SVG and turn every label back around its own point so that it stays readable
+let svgCache = {src: '', rot: -1, html: ''};
+function mapImage() {
+  const cls = 'mimg' + (D.rotation ? ' r' + D.rotation : '');
+  const prefix = 'data:image/svg+xml;base64,';
+  if (!D.rotation || D.map.indexOf(prefix) !== 0 || typeof DOMParser === 'undefined') return '<img alt="" class="' + cls + '" src="' + D.map + '">';
+  if (svgCache.src !== D.map || svgCache.rot !== D.rotation) {
+    let html = '';
+    try {
+      const bytes = Uint8Array.from(atob(D.map.slice(prefix.length)), c => c.charCodeAt(0));
+      const doc = new DOMParser().parseFromString(new TextDecoder().decode(bytes), 'image/svg+xml');
+      const svg = doc.documentElement;
+      if (svg && svg.nodeName.toLowerCase() === 'svg') {
+        if (!svg.getAttribute('viewBox') && svg.getAttribute('width')) svg.setAttribute('viewBox', '0 0 ' + parseFloat(svg.getAttribute('width')) + ' ' + parseFloat(svg.getAttribute('height')));
+        svg.removeAttribute('width'); svg.removeAttribute('height');
+        svg.querySelectorAll('text').forEach(el => {
+          const x = el.getAttribute('x') || 0, y = el.getAttribute('y') || 0;
+          el.setAttribute('transform', ((el.getAttribute('transform') || '') + ' rotate(' + (-D.rotation) + ' ' + x + ' ' + y + ')').trim());
+        });
+        html = new XMLSerializer().serializeToString(svg);
+      }
+    } catch (e) { html = ''; }
+    svgCache = {src: D.map, rot: D.rotation, html: html};
+  }
+  return svgCache.html ? '<div class="' + cls + '">' + svgCache.html + '</div>' : '<img alt="" class="' + cls + '" src="' + D.map + '">';
 }
 
 function renderTop() {

@@ -176,6 +176,7 @@ verlinken und ihr eine große Kachel geben. Sie passt sich der Größe an:
 
 * **Mitte:** Stockwerk-Knöpfe, wenn der Roboter mehrere Karten hat (Wechsel lädt die Karte, Räume werden neu eingelesen), Karte – optionale Eigenschaft *Karte* (HTML-Box mit Kartenbild, z. B. aus einem Kartenskript, oder ein
   Bildobjekt); in 90°-Schritten drehbar (Eigenschaft *Karte drehen*)
+* eigene Raumnamen und ausgeblendete Räume: Liste *Räume* in der Instanz
 * **links:** großer Hauptknopf (*Räume reinigen (n)* bei Raumauswahl, sonst *Alles reinigen*; während der Reinigung
   *Pause*, bei unterbrochenem Auftrag *Fortsetzen*), Knöpfe *Stopp*, *Station*, *Finden*, Raumauswahl als Kacheln,
   Saugleistung / Wassermenge / Wischmodus als Knöpfe (gut bedienbar auf Wandtablets), Durchgänge 1×/2×/3×

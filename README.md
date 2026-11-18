@@ -148,6 +148,7 @@ and give it a large tile. It adapts to its size:
 
 * **middle:** floor buttons if the robot has several maps (switching loads the map, rooms are read again), map – optional property *Map* (an HTML box containing an image of the map, e.g. from a map script, or an
   image object); can be rotated in 90° steps (property *Rotate map*)
+* own room names and hidden rooms: list *Rooms* in the instance
 * **left:** big main button (*Clean rooms (n)* with selected rooms, otherwise *Clean everything*; *Pause* while
   cleaning, *Resume* for an interrupted task), buttons *Stop*, *Dock*, *Locate*, room selection as tiles,
   suction power / water flow / mop mode as buttons (easy to use on wall tablets), passes 1×/2×/3×

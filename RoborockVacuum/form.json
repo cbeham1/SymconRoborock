@@ -18,6 +18,52 @@
             "caption": "Room selection (one switch per room of the map)"
         },
         {
+            "type": "ExpansionPanel",
+            "caption": "Rooms",
+            "items": [
+                {
+                    "type": "Label",
+                    "caption": "Own names (empty = name from the Roborock app) and which rooms are shown. Rooms are read with \"Reload rooms\"."
+                },
+                {
+                    "type": "List",
+                    "name": "RoomSettings",
+                    "caption": "Rooms",
+                    "rowCount": 8,
+                    "add": false,
+                    "delete": false,
+                    "columns": [
+                        {
+                            "caption": "Segment",
+                            "name": "segment",
+                            "width": "90px"
+                        },
+                        {
+                            "caption": "Name in the app",
+                            "name": "app",
+                            "width": "200px"
+                        },
+                        {
+                            "caption": "Own name",
+                            "name": "name",
+                            "width": "auto",
+                            "edit": {
+                                "type": "ValidationTextBox"
+                            }
+                        },
+                        {
+                            "caption": "Show",
+                            "name": "show",
+                            "width": "90px",
+                            "edit": {
+                                "type": "CheckBox"
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
             "type": "CheckBox",
             "name": "ShowConsumables",
             "caption": "Consumables (main brush, side brush, filter, sensors)"

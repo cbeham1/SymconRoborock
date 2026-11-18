@@ -122,6 +122,7 @@ class RoborockCloudVacuum extends IPSModule
         $this->RegisterPropertyInteger('RobotImage', 0);
         $this->RegisterPropertyInteger('RobotArt', 0);
         $this->RegisterPropertyInteger('MapRotation', 0);
+        $this->RegisterPropertyString('RoomSettings', '[]');
 
         $this->RegisterAttributeString('Rooms', '[]');
         $this->RegisterAttributeBoolean('RoomsLoaded', false);
@@ -167,6 +168,35 @@ class RoborockCloudVacuum extends IPSModule
         $this->SetStatus(IS_ACTIVE);
         // First update shortly after the changes are applied; Update() sets the regular interval
         $this->SetTimerInterval('Update', self::FIRST_UPDATE_DELAY * 1000);
+    }
+
+    /** Room list in the form: segment, name in the app, own name, show. */
+    public function GetConfigurationForm(): string
+    {
+        $form = json_decode((string) file_get_contents(__DIR__ . '/form.json'), true);
+        $settings = [];
+        foreach (json_decode($this->ReadPropertyString('RoomSettings'), true) ?: [] as $row) {
+            if (isset($row['segment'])) {
+                $settings[(int) $row['segment']] = $row;
+            }
+        }
+        $values = [];
+        foreach (json_decode($this->ReadAttributeString('Rooms'), true) ?: [] as $room) {
+            $setting = $settings[(int) $room['segment']] ?? [];
+            $values[] = ['segment' => (int) $room['segment'], 'app' => (string) $room['name'], 'name' => (string) ($setting['name'] ?? ''), 'show' => (bool) ($setting['show'] ?? true)];
+        }
+        foreach ($form['elements'] as &$element) {
+            if (($element['type'] ?? '') === 'ExpansionPanel') {
+                foreach ($element['items'] as &$item) {
+                    if (($item['name'] ?? '') === 'RoomSettings') {
+                        $item['values'] = $values;
+                    }
+                }
+                unset($item);
+            }
+        }
+        unset($element);
+        return json_encode($form);
     }
 
     public function MessageSink($TimeStamp, $SenderID, $Message, $Data): void
@@ -458,7 +488,7 @@ class RoborockCloudVacuum extends IPSModule
     public function CleanSelectedRooms(): bool
     {
         $selected = [];
-        foreach (json_decode($this->ReadAttributeString('Rooms'), true) ?: [] as $room) {
+        foreach ($this->Rooms() as $room) {
             $ident = 'Room' . $room['segment'];
             if (@$this->GetIDForIdent($ident) && $this->GetValue($ident)) {
                 $selected[] = (int) $room['segment'];
@@ -773,16 +803,41 @@ class RoborockCloudVacuum extends IPSModule
         return true;
     }
 
+    /**
+     * Rooms of the robot with the own names of the property "RoomSettings" (empty = name from the app);
+     * hidden rooms only with $all (then with show = false).
+     */
+    private function Rooms(bool $all = false): array
+    {
+        $settings = [];
+        foreach (json_decode($this->ReadPropertyString('RoomSettings'), true) ?: [] as $row) {
+            if (isset($row['segment'])) {
+                $settings[(int) $row['segment']] = $row;
+            }
+        }
+        $rooms = [];
+        foreach (json_decode($this->ReadAttributeString('Rooms'), true) ?: [] as $room) {
+            $setting = $settings[(int) $room['segment']] ?? [];
+            $name = trim((string) ($setting['name'] ?? ''));
+            $show = (bool) ($setting['show'] ?? true);
+            if ($show || $all) {
+                $rooms[] = ['segment' => (int) $room['segment'], 'name' => $name !== '' ? $name : (string) $room['name'], 'show' => $show];
+            }
+        }
+        return $rooms;
+    }
+
     /** One switch per room (selection for "Clean selected rooms"); removes switches of rooms that no longer exist. */
     private function MaintainRoomVariables(array $oldRooms): void
     {
         $show = $this->ReadPropertyBoolean('ShowRooms');
         $current = [];
-        foreach (json_decode($this->ReadAttributeString('Rooms'), true) ?: [] as $index => $room) {
+        foreach ($this->Rooms(true) as $index => $room) {
             $ident = 'Room' . (int) $room['segment'];
             $current[$ident] = true;
-            $this->MaintainVariable($ident, (string) $room['name'], VARIABLETYPE_BOOLEAN, '~Switch', 100 + $index, $show);
-            if ($show) {
+            $visible = $show && $room['show'];
+            $this->MaintainVariable($ident, (string) $room['name'], VARIABLETYPE_BOOLEAN, '~Switch', 100 + $index, $visible);
+            if ($visible) {
                 $this->EnableAction($ident);
                 // Name may have been changed in the app
                 $id = $this->GetIDForIdent($ident);
@@ -829,7 +884,7 @@ class RoborockCloudVacuum extends IPSModule
         };
         $state = (int) $value('State');
         $rooms = [];
-        foreach (json_decode($this->ReadAttributeString('Rooms'), true) ?: [] as $room) {
+        foreach ($this->Rooms() as $room) {
             $ident = 'Room' . (int) $room['segment'];
             if ($id($ident) > 0) {
                 $rooms[] = ['ident' => $ident, 'name' => (string) $room['name'], 'on' => (bool) $this->GetValue($ident)];
@@ -1031,7 +1086,7 @@ class RoborockCloudVacuum extends IPSModule
         // Rooms: selected rooms highlighted
         $rooms = '';
         if ($this->ReadPropertyBoolean('ShowRooms')) {
-            foreach (json_decode($this->ReadAttributeString('Rooms'), true) ?: [] as $room) {
+            foreach ($this->Rooms() as $room) {
                 $ident = 'Room' . (int) $room['segment'];
                 $selected = @$this->GetIDForIdent($ident) && $this->GetValue($ident);
                 $rooms .= '<span class="room' . ($selected ? ' on' : '') . '">' . $e((string) $room['name']) . '</span>';
