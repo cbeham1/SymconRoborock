@@ -78,7 +78,7 @@ Nicht beides gleichzeitig – der Store meldet sonst einen Konflikt.
 > Die Bilder unten sind Schemabilder: Sie zeigen Felder und Reihenfolge, das Aussehen in Symcon weicht etwas ab.
 > Namen, IDs und Adressen darin sind Beispiele.
 
-![Einrichtung im Überblick](docs/ablauf.de.svg)
+![Einrichtung im Überblick](docs/ablauf.de.png)
 
 ## Einrichtung Schritt für Schritt
 
@@ -92,14 +92,14 @@ Nicht beides gleichzeitig – der Store meldet sonst einen Konflikt.
    Bei einem neuen Client antwortet Roborock oft mit *„need two-step validate (2031)“* – dann den Code-Weg nehmen.
    Nach Erfolg erscheint *„Anmeldung erfolgreich – Geräte: …“*, die Instanz ist aktiv.
 
-   ![Instanz Roborock Cloud Account](docs/konto.de.svg)
+   ![Instanz Roborock Cloud Account](docs/konto.de.png)
 4. **Konfigurator** öffnen, unter *„Erstelle neue Instanzen in“* den Ort wählen, Roboter markieren → **Erstellen**.
 
-   ![Roborock Cloud Configurator](docs/konfigurator.de.svg)
+   ![Roborock Cloud Configurator](docs/konfigurator.de.png)
 5. Die neue Instanz **„Roborock Cloud Vacuum“** liest nach ca. 5 s den Status, lädt die Räume und erstellt die
    Statuskachel. Variable **„Statuskachel“** auf eine Kachel legen und die Kachelgröße im Bearbeiten-Modus anpassen.
 
-   ![Instanz Roborock Cloud Vacuum](docs/roboter.de.svg)
+   ![Instanz Roborock Cloud Vacuum](docs/roboter.de.png)
 
 ## Die drei Module
 

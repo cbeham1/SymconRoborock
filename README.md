@@ -82,7 +82,7 @@ Not both at the same time – the store reports a conflict otherwise.
 > The pictures below are schematic: they show the fields and their order, Symcon looks slightly different.
 > Names, IDs and addresses in them are examples.
 
-![Setup at a glance](docs/ablauf.en.svg)
+![Setup at a glance](docs/ablauf.en.png)
 
 ## Setup step by step
 
@@ -96,14 +96,14 @@ Not both at the same time – the store reports a conflict otherwise.
      Roborock answers new clients with *"need two-step validate (2031)"* – then use the code.
    After a successful login the message lists the devices of the account and the status is *active*.
 
-   ![Roborock Cloud Account instance](docs/konto.en.svg)
+   ![Roborock Cloud Account instance](docs/konto.en.png)
 4. Open the **configurator**, select a robot and press **Create**.
 
-   ![Roborock Cloud Configurator](docs/konfigurator.en.svg)
+   ![Roborock Cloud Configurator](docs/konfigurator.en.png)
 5. The new **"Roborock Cloud Vacuum"** instance reads the status after ~5 s, loads the rooms of the map and creates the
    status tile. Put the variable **"Status tile"** on a tile of the tile visualization and size the tile in edit mode.
 
-   ![Roborock Cloud Vacuum instance](docs/roboter.en.svg)
+   ![Roborock Cloud Vacuum instance](docs/roboter.en.png)
 
 ## Modules
 
