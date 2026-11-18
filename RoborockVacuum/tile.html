@@ -60,7 +60,11 @@ html,body{margin:0!important;height:100%;background:transparent;overflow:hidden}
 /* Map */
 .map{grid-area:map;position:relative;min-height:0;border-radius:1em;background:var(--mapbg);border:1px solid var(--line);overflow:hidden;
   background-image:radial-gradient(var(--line) 1px,transparent 1px);background-size:1em 1em}
+.map{container-type:size}
 .map img{position:absolute;inset:.6em;width:calc(100% - 1.2em);height:calc(100% - 1.2em);object-fit:contain}
+/* Rotated map: for 90/270 degrees the image box swaps width and height of the map area */
+.map img.r90,.map img.r270{inset:auto;left:50%;top:50%;width:calc(100cqh - 1.2em);height:calc(100cqw - 1.2em)}
+.map img.r90{transform:translate(-50%,-50%) rotate(90deg)}.map img.r270{transform:translate(-50%,-50%) rotate(270deg)}.map img.r180{transform:rotate(180deg)}
 .map .none{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.6em;color:var(--mut);text-align:center;padding:1em}
 .map .none img{position:static;width:auto;height:auto;max-width:70%;max-height:60%}
 .map .none svg{width:60%;max-height:55%}
@@ -186,7 +190,7 @@ function renderMap() {
   let floors = '';
   if (D.floors.length > 1) floors = '<div class="floors">' + D.floors.map(f => '<button data-floor="' + f[0] + '" class="' + (f[0] === D.floor ? 'on' : '') + '">' + esc(f[1]) + '</button>').join('') + '</div>';
   else if (D.floors.length === 1 && D.floors[0][1]) floors = '<div class="floors"><span>' + esc(D.floors[0][1]) + '</span></div>';
-  $('map').innerHTML = floors + (D.map ? '<img alt="" src="' + D.map + '">'
+  $('map').innerHTML = floors + (D.map ? '<img alt="" class="' + (D.rotation ? 'r' + D.rotation : '') + '" src="' + D.map + '">'
     : '<div class="none">' + picture() + '<div>' + T('No map') + '</div></div>');
 }
 

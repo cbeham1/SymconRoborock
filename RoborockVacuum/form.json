@@ -72,6 +72,29 @@
                     "caption": "Map (optional: HTML box with an image of the map, or image)"
                 },
                 {
+                    "type": "Select",
+                    "name": "MapRotation",
+                    "caption": "Rotate map",
+                    "options": [
+                        {
+                            "caption": "0°",
+                            "value": 0
+                        },
+                        {
+                            "caption": "90°",
+                            "value": 90
+                        },
+                        {
+                            "caption": "180°",
+                            "value": 180
+                        },
+                        {
+                            "caption": "270°",
+                            "value": 270
+                        }
+                    ]
+                },
+                {
                     "type": "SelectMedia",
                     "name": "RobotImage",
                     "caption": "Picture of the robot (optional, image)"

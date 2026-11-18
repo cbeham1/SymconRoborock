@@ -121,6 +121,7 @@ class RoborockCloudVacuum extends IPSModule
         $this->RegisterPropertyInteger('MapVariable', 0);
         $this->RegisterPropertyInteger('RobotImage', 0);
         $this->RegisterPropertyInteger('RobotArt', 0);
+        $this->RegisterPropertyInteger('MapRotation', 0);
 
         $this->RegisterAttributeString('Rooms', '[]');
         $this->RegisterAttributeBoolean('RoomsLoaded', false);
@@ -871,6 +872,7 @@ class RoborockCloudVacuum extends IPSModule
             'stats'     => $stats,
             'updated'   => $updated <= 0 ? '–' : (date('Ymd', $updated) === date('Ymd') ? date('H:i', $updated) : date('d.m. H:i', $updated)),
             'theme'     => $this->ReadPropertyInteger('TileTheme'),
+            'rotation'  => in_array($this->ReadPropertyInteger('MapRotation'), [90, 180, 270], true) ? $this->ReadPropertyInteger('MapRotation') : 0,
             't'         => $texts,
         ];
     }
