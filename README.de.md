@@ -124,6 +124,7 @@ doppelt angelegt.
 | Einstellung | Standard | Bedeutung |
 |-------------|----------|-----------|
 | Geräte-ID (DUID) | – | vom Konfigurator eingetragen |
+| Aktualisierungsintervall während der Reinigung | 30 s | beim Reinigen und auf dem Weg zur Station (mindestens 30 s) |
 | Aktualisierungsintervall | 120 s | Abstand der Statusabfragen (mind. 30 s) |
 | Raumauswahl | an | Schalter je Raum + *Durchgänge* |
 | Verschleißteile | an | Restlaufzeit in %, jede 30. Abfrage |

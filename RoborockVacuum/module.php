@@ -113,6 +113,7 @@ class RoborockCloudVacuum extends IPSModule
 
         $this->RegisterPropertyString('DUID', '');
         $this->RegisterPropertyInteger('UpdateInterval', 120);
+        $this->RegisterPropertyInteger('CleaningInterval', 30);
         $this->RegisterPropertyBoolean('ShowRooms', true);
         $this->RegisterPropertyBoolean('ShowConsumables', true);
         $this->RegisterPropertyBoolean('ShowStatistics', true);
@@ -330,6 +331,10 @@ class RoborockCloudVacuum extends IPSModule
             }
         }
         $this->ApplyStatus($status, $online);
+        // While cleaning or driving (back) to the dock: shorter interval so that time, area and state follow closely
+        $active = in_array((int) $this->GetValue('State'), array_merge(self::CLEANING_STATES, [6, 15]), true);
+        $interval = $active ? $this->ReadPropertyInteger('CleaningInterval') : $this->ReadPropertyInteger('UpdateInterval');
+        $this->SetTimerInterval('Update', max(self::MIN_INTERVAL, $interval) * 1000);
 
         $volume = $results[1]['result'] ?? null;
         $volume = is_array($volume) ? ($volume[0] ?? null) : $volume;

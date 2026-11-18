@@ -13,6 +13,13 @@
             "minimum": 30
         },
         {
+            "type": "NumberSpinner",
+            "name": "CleaningInterval",
+            "caption": "Update interval while cleaning",
+            "suffix": "s",
+            "minimum": 30
+        },
+        {
             "type": "CheckBox",
             "name": "ShowRooms",
             "caption": "Room selection (one switch per room of the map)"

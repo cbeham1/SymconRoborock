@@ -9,6 +9,7 @@ sends commands. Create it with the [configurator](../RoborockConfigurator/README
 |----------|---------|-------------|
 | Device ID (`DUID`) | – | Device ID of the robot in the Roborock cloud, filled in by the configurator |
 | Update interval | 120 s | Seconds between status queries (minimum 30). After a command the status is read after 4 s. |
+| Update interval while cleaning | 30 s | Seconds between status queries while cleaning or driving to the dock (minimum 30). |
 | Room selection | on | One switch per room of the map plus the variable *Passes* |
 | Consumables | on | Remaining lifetime of main brush, side brush, filter and sensors (read every 30th update) |
 | Cleaning statistics | on | Total area, total time, number of cleanings (read every 30th update) |

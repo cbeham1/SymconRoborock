@@ -168,7 +168,8 @@
             "Segment": "Segment",
             "Name in the app": "Name in der App",
             "Own name": "Eigener Name",
-            "Show": "Anzeigen"
+            "Show": "Anzeigen",
+            "Update interval while cleaning": "Aktualisierungsintervall während der Reinigung"
         }
     }
 }
