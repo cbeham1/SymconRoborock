@@ -74,8 +74,15 @@ Tested with: Roborock Qrevo Master (`roborock.vacuum.a117`) and S7 MaxV Ultra (`
 
 ## Installation
 
-* **Module Store:** search for *Roborock Cloud* and install, or
+* **Module Store** (basket icon at the top right of the management console): search for *Roborock Cloud* and install, or
 * **Module Control:** add the URL `https://github.com/cbeham1/SymconRoborock`
+
+Not both at the same time – the store reports a conflict otherwise.
+
+> The pictures below are schematic: they show the fields and their order, Symcon looks slightly different.
+> Names, IDs and addresses in them are examples.
+
+![Setup at a glance](docs/ablauf.en.svg)
 
 ## Setup step by step
 
@@ -88,9 +95,15 @@ Tested with: Roborock Qrevo Master (`roborock.vacuum.a117`) and S7 MaxV Ultra (`
    * **Send code by e-mail** → enter the code from the mail → **Log in with code**.
      Roborock answers new clients with *"need two-step validate (2031)"* – then use the code.
    After a successful login the message lists the devices of the account and the status is *active*.
-4. Open the **configurator**, select a robot and press **Create** (or *Create all*).
+
+   ![Roborock Cloud Account instance](docs/konto.en.svg)
+4. Open the **configurator**, select a robot and press **Create**.
+
+   ![Roborock Cloud Configurator](docs/konfigurator.en.svg)
 5. The new **"Roborock Cloud Vacuum"** instance reads the status after ~5 s, loads the rooms of the map and creates the
    status tile. Put the variable **"Status tile"** on a tile of the tile visualization and size the tile in edit mode.
+
+   ![Roborock Cloud Vacuum instance](docs/roboter.en.svg)
 
 ## Modules
 

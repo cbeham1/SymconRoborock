@@ -70,8 +70,15 @@ Getestet: Roborock Qrevo Master (`roborock.vacuum.a117`), S7 MaxV Ultra (`roboro
 
 ## Installation
 
-* **Module Store:** nach *Roborock Cloud* suchen und installieren, oder
+* **Module Store** (Korb-Symbol oben rechts in der Verwaltungskonsole): nach *Roborock Cloud* suchen und installieren, oder
 * **Module Control:** URL `https://github.com/cbeham1/SymconRoborock` hinzufügen
+
+Nicht beides gleichzeitig – der Store meldet sonst einen Konflikt.
+
+> Die Bilder unten sind Schemabilder: Sie zeigen Felder und Reihenfolge, das Aussehen in Symcon weicht etwas ab.
+> Namen, IDs und Adressen darin sind Beispiele.
+
+![Einrichtung im Überblick](docs/ablauf.de.svg)
 
 ## Einrichtung Schritt für Schritt
 
@@ -84,9 +91,15 @@ Getestet: Roborock Qrevo Master (`roborock.vacuum.a117`), S7 MaxV Ultra (`roboro
    * **Code per E-Mail senden** → Code aus der Mail eintragen → **Mit Code anmelden**.
    Bei einem neuen Client antwortet Roborock oft mit *„need two-step validate (2031)“* – dann den Code-Weg nehmen.
    Nach Erfolg erscheint *„Anmeldung erfolgreich – Geräte: …“*, die Instanz ist aktiv.
+
+   ![Instanz Roborock Cloud Account](docs/konto.de.svg)
 4. **Konfigurator** öffnen, unter *„Erstelle neue Instanzen in“* den Ort wählen, Roboter markieren → **Erstellen**.
+
+   ![Roborock Cloud Configurator](docs/konfigurator.de.svg)
 5. Die neue Instanz **„Roborock Cloud Vacuum“** liest nach ca. 5 s den Status, lädt die Räume und erstellt die
    Statuskachel. Variable **„Statuskachel“** auf eine Kachel legen und die Kachelgröße im Bearbeiten-Modus anpassen.
+
+   ![Instanz Roborock Cloud Vacuum](docs/roboter.de.svg)
 
 ## Die drei Module
 
