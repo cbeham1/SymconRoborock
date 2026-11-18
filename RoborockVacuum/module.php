@@ -222,6 +222,14 @@ class RoborockCloudVacuum extends IPSModule
             case 'Floor':
                 $ok = $this->LoadFloor((int) $Value);
                 break;
+            case 'ResetConsumable':
+                // From the cleaning tile: 0 = main brush, 1 = side brush, 2 = filter, 3 = sensors
+                $consumables = array_keys(self::CONSUMABLES);
+                if (!isset($consumables[(int) $Value])) {
+                    throw new Exception('Invalid value');
+                }
+                $ok = $this->ResetConsumable($consumables[(int) $Value]);
+                break;
             default:
                 if (strpos((string) $Ident, 'Room') === 0) {
                     $this->SetValue($Ident, (bool) $Value);
@@ -828,9 +836,9 @@ class RoborockCloudVacuum extends IPSModule
             }
         }
         $parts = [];
-        foreach (['MainBrush', 'SideBrush', 'Filter', 'Sensors'] as $ident) {
+        foreach (array_keys(self::CONSUMABLES) as $index => $ident) {
             if ($id($ident) > 0) {
-                $parts[] = [IPS_GetName($id($ident)), (int) $this->GetValue($ident)];
+                $parts[] = [IPS_GetName($id($ident)), (int) $this->GetValue($ident), $index];
             }
         }
         $stats = [];
@@ -842,7 +850,7 @@ class RoborockCloudVacuum extends IPSModule
         $updated = (int) $value('LastUpdate');
         $texts = [];
         foreach (['Start', 'All rooms', 'Pause', 'Resume', 'Stop', 'Dock', 'Locate', 'Rooms', 'Settings', 'Passes', 'No map', 'Battery', 'Charging',
-            'Last cleaning', 'Duration', 'Area', 'Statistics', 'Maintenance', 'Offline', 'Last update'] as $text) {
+            'Last cleaning', 'Duration', 'Area', 'Statistics', 'Maintenance', 'Offline', 'Last update', 'Reset', 'Sure?'] as $text) {
             $texts[$text] = $this->Translate($text);
         }
         return [

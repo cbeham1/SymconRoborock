@@ -161,7 +161,9 @@
             "Robot with charging dock": "Roboter mit Ladestation",
             "Floor": "Stockwerk",
             "Map %d": "Karte %d",
-            "Rotate map": "Karte drehen"
+            "Rotate map": "Karte drehen",
+            "Reset": "Zurücksetzen",
+            "Sure?": "Sicher?"
         }
     }
 }

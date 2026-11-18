@@ -151,7 +151,7 @@ and give it a large tile. It adapts to its size:
 * **left:** big main button (*Clean rooms (n)* with selected rooms, otherwise *Clean everything*; *Pause* while
   cleaning, *Resume* for an interrupted task), buttons *Stop*, *Dock*, *Locate*, room selection as tiles,
   suction power / water flow / mop mode as buttons (easy to use on wall tablets), passes 1×/2×/3×
-* **right:** picture of the robot (optional property *Picture of the robot*, otherwise an illustration: robot with multifunction station, auto-empty dock or charging dock), battery ring and state, error banner, last cleaning (duration, area), statistics, maintenance bars,
+* **right:** picture of the robot (optional property *Picture of the robot*, otherwise an illustration: robot with multifunction station, auto-empty dock or charging dock), battery ring and state, error banner, last cleaning (duration, area), statistics, maintenance bars with *Reset* (tap twice to confirm),
   time of the last update (also as variable *Last update*, written after every successful query)
 
 Narrower tiles put the map on top and the two columns below; on very small tiles everything is stacked. Commands go

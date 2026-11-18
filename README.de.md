@@ -179,7 +179,7 @@ verlinken und ihr eine große Kachel geben. Sie passt sich der Größe an:
 * **links:** großer Hauptknopf (*Räume reinigen (n)* bei Raumauswahl, sonst *Alles reinigen*; während der Reinigung
   *Pause*, bei unterbrochenem Auftrag *Fortsetzen*), Knöpfe *Stopp*, *Station*, *Finden*, Raumauswahl als Kacheln,
   Saugleistung / Wassermenge / Wischmodus als Knöpfe (gut bedienbar auf Wandtablets), Durchgänge 1×/2×/3×
-* **rechts:** Bild des Roboters (optionale Eigenschaft *Bild des Roboters*, sonst eine Illustration: Roboter mit Multifunktionsstation, Absaugstation oder Ladestation), Akku-Ring und Zustand, Fehlerbanner, letzte Reinigung (Dauer, Fläche), Statistik, Wartungsbalken,
+* **rechts:** Bild des Roboters (optionale Eigenschaft *Bild des Roboters*, sonst eine Illustration: Roboter mit Multifunktionsstation, Absaugstation oder Ladestation), Akku-Ring und Zustand, Fehlerbanner, letzte Reinigung (Dauer, Fläche), Statistik, Wartungsbalken mit *Zurücksetzen* (zweimal tippen zur Bestätigung),
   Zeit der letzten Aktualisierung (auch als Variable *Letzte Aktualisierung*, nach jeder erfolgreichen Abfrage gesetzt)
 
 Bei schmaleren Kacheln steht die Karte oben und die beiden Spalten darunter, bei sehr kleinen Kacheln alles
