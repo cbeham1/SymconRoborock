@@ -75,6 +75,29 @@
                     "type": "SelectMedia",
                     "name": "RobotImage",
                     "caption": "Picture of the robot (optional, image)"
+                },
+                {
+                    "type": "Select",
+                    "name": "RobotArt",
+                    "caption": "Illustration (if no picture is selected)",
+                    "options": [
+                        {
+                            "caption": "Automatic (from the functions of the robot)",
+                            "value": 0
+                        },
+                        {
+                            "caption": "Robot with multifunction station",
+                            "value": 1
+                        },
+                        {
+                            "caption": "Robot with auto-empty dock",
+                            "value": 2
+                        },
+                        {
+                            "caption": "Robot with charging dock",
+                            "value": 3
+                        }
+                    ]
                 }
             ]
         }

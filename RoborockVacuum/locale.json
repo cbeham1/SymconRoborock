@@ -153,7 +153,14 @@
             "Statistics": "Statistik",
             "Picture of the robot (optional, image)": "Bild des Roboters (optional, Bild)",
             "All rooms": "Alle Räume",
-            "Last update": "Letzte Aktualisierung"
+            "Last update": "Letzte Aktualisierung",
+            "Illustration (if no picture is selected)": "Illustration (wenn kein Bild gewählt ist)",
+            "Automatic (from the functions of the robot)": "Automatisch (nach den Funktionen des Roboters)",
+            "Robot with multifunction station": "Roboter mit Multifunktionsstation",
+            "Robot with auto-empty dock": "Roboter mit Absaugstation",
+            "Robot with charging dock": "Roboter mit Ladestation",
+            "Floor": "Stockwerk",
+            "Map %d": "Karte %d"
         }
     }
 }

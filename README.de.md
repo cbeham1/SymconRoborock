@@ -174,12 +174,12 @@ Schaltflächen: *Jetzt aktualisieren*, *Räume neu einlesen* (nach Umbenennen/Te
 Die Sauger-Instanz ist selbst eine Kachel der Kachel-Visualisierung (HTML-SDK, ab 1.8): die **Instanz** auf einer Seite
 verlinken und ihr eine große Kachel geben. Sie passt sich der Größe an:
 
-* **Mitte:** Karte – optionale Eigenschaft *Karte* (HTML-Box mit Kartenbild, z. B. aus einem Kartenskript, oder ein
+* **Mitte:** Stockwerk-Knöpfe, wenn der Roboter mehrere Karten hat (Wechsel lädt die Karte, Räume werden neu eingelesen), Karte – optionale Eigenschaft *Karte* (HTML-Box mit Kartenbild, z. B. aus einem Kartenskript, oder ein
   Bildobjekt); ein Abzeichen zeigt den aktuellen Zustand
 * **links:** großer Hauptknopf (*Räume reinigen (n)* bei Raumauswahl, sonst *Alles reinigen*; während der Reinigung
   *Pause*, bei unterbrochenem Auftrag *Fortsetzen*), Knöpfe *Stopp*, *Station*, *Finden*, Raumauswahl als Kacheln,
-  Saugleistung / Wassermenge / Wischmodus als Auswahllisten, Durchgänge 1×/2×/3×
-* **rechts:** Bild des Roboters (optionale Eigenschaft *Bild des Roboters*), Akku-Ring und Zustand, Fehlerbanner, letzte Reinigung (Dauer, Fläche), Statistik, Wartungsbalken,
+  Saugleistung / Wassermenge / Wischmodus als Knöpfe (gut bedienbar auf Wandtablets), Durchgänge 1×/2×/3×
+* **rechts:** Bild des Roboters (optionale Eigenschaft *Bild des Roboters*, sonst eine Illustration: Roboter mit Multifunktionsstation, Absaugstation oder Ladestation), Akku-Ring und Zustand, Fehlerbanner, letzte Reinigung (Dauer, Fläche), Statistik, Wartungsbalken,
   Zeit der letzten Aktualisierung (auch als Variable *Letzte Aktualisierung*, nach jeder erfolgreichen Abfrage gesetzt)
 
 Bei schmaleren Kacheln steht die Karte oben und die beiden Spalten darunter, bei sehr kleinen Kacheln alles

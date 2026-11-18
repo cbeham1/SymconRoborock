@@ -44,22 +44,25 @@ html,body{margin:0!important;height:100%;background:transparent;overflow:hidden}
 .room:before{content:"";position:absolute;left:.7em;top:50%;width:.95em;height:.95em;margin-top:-.48em;border-radius:.3em;border:2px solid var(--mut)}
 .room.on{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 16%,transparent)}
 .room.on:before{border-color:var(--acc);background:var(--acc) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.2l2.3 2.3 4.7-5' stroke='%23fff' stroke-width='2' fill='none'/%3E%3C/svg%3E") center/.8em no-repeat}
-.sel{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:.5em .8em;font-size:.92em}
-.sel label{color:var(--mut)}
-.sel select{width:100%;padding:.5em 2em .5em .7em;border-radius:.6em;border:1px solid var(--line);background:var(--soft);color:var(--fg);font-family:inherit;font-size:1em;font-weight:600;
-  appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%239aa5b1' stroke-width='1.6' fill='none'/%3E%3C/svg%3E");
-  background-repeat:no-repeat;background-position:right .7em center;background-size:.75em}
-.sel select option{color:#1f2933}
-.seg{display:flex;border:1px solid var(--line);border-radius:.6em;overflow:hidden}
-.seg button{flex:1;padding:.45em 0;border:0;background:transparent;color:var(--fg);font-family:inherit;font-size:1em;font-weight:600;cursor:pointer}
-.seg button.on{background:var(--acc);color:#fff}
+.set{display:flex;flex-direction:column;gap:.3em}
+.set label{font-size:.85em;color:var(--mut)}
+.opts{display:flex;flex-wrap:wrap;gap:.35em}
+.opts button{flex:1 1 auto;min-height:2.5em;padding:.35em .8em;border-radius:.6em;border:1px solid var(--line);background:var(--soft);color:var(--fg);
+  font-family:inherit;font-size:.92em;font-weight:600;cursor:pointer;white-space:nowrap}
+.opts button.on{background:var(--acc);border-color:var(--acc);color:#fff}
+.opts button:hover{background:var(--soft2)}.opts button.on:hover{background:var(--acc)}
 /* Map */
 .map{grid-area:map;position:relative;min-height:0;border-radius:1em;background:var(--mapbg);border:1px solid var(--line);overflow:hidden;
   background-image:radial-gradient(var(--line) 1px,transparent 1px);background-size:1em 1em}
 .map img{position:absolute;inset:.6em;width:calc(100% - 1.2em);height:calc(100% - 1.2em);object-fit:contain}
 .map .none{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.6em;color:var(--mut);text-align:center;padding:1em}
 .map .none img{position:static;width:auto;height:auto;max-width:70%;max-height:60%}
-.map .none svg{width:4em;height:4em;stroke:var(--st,var(--acc));fill:none;stroke-width:1.4}
+.map .none svg{width:60%;max-height:55%}
+.floors{position:absolute;left:.6em;top:.6em;display:flex;gap:.3em;z-index:2}
+.floors button,.floors span{padding:.4em .9em;border-radius:2em;border:1px solid var(--line);background:color-mix(in srgb,var(--bg2) 85%,transparent);color:var(--fg);
+  font-family:inherit;font-size:.85em;font-weight:600;backdrop-filter:blur(4px)}
+.floors button{cursor:pointer;min-height:2.4em}.floors button.on{background:var(--acc);border-color:var(--acc);color:#fff}
+.art{width:100%;height:100%;max-height:12em}
 /* Info */
 .robot{position:relative;flex:0 1 auto;min-height:7em;max-height:34%;display:flex;align-items:center;justify-content:center;border-radius:1em;overflow:hidden;
   background:radial-gradient(60% 70% at 50% 60%,color-mix(in srgb,var(--st,var(--acc)) 18%,transparent),transparent 70%)}
@@ -113,11 +116,36 @@ function color() {
   return 'var(--warn)';
 }
 
-function select(ident, opt) {
-  if (!opt) return '';
-  return '<label>' + esc(opt.label) + '</label><select data-ident="' + ident + '">'
-    + opt.options.map(o => '<option value="' + o[0] + '"' + (o[0] === opt.value ? ' selected' : '') + '>' + esc(o[1]) + '</option>').join('') + '</select>';
+function options(ident, opt) {
+  if (!opt || !opt.options.length) return '';
+  return '<div class="set"><label>' + esc(opt.label) + '</label><div class="opts">'
+    + opt.options.map(o => '<button data-ident="' + ident + '" data-value="' + o[0] + '" class="' + (o[0] === opt.value ? 'on' : '') + '">' + esc(o[1]) + '</button>').join('')
+    + '</div></div>';
 }
+
+// Own illustrations (no product photos): robot with multifunction station, with auto-empty dock, with charging dock
+function art(kind) {
+  const robot = '<ellipse cx="96" cy="138" rx="62" ry="14" fill="#000" opacity=".25"/>'
+    + '<path d="M36 118a60 16 0 0 0 120 0v10a60 16 0 0 1-120 0z" fill="#2b3138"/>'
+    + '<ellipse cx="96" cy="118" rx="60" ry="16" fill="url(#rt)"/>'
+    + '<ellipse cx="96" cy="112" rx="15" ry="5" fill="#1d2228"/><path d="M81 106h30v6a15 5 0 0 1-30 0z" fill="#3a424b"/><ellipse cx="96" cy="106" rx="15" ry="5" fill="#59636e"/>'
+    + '<path d="M44 121a52 12 0 0 0 104 0" fill="none" stroke="var(--st,var(--acc))" stroke-width="2" opacity=".9"/>';
+  let dock = '';
+  if (kind === 1) {
+    dock = '<rect x="104" y="14" width="74" height="122" rx="10" fill="url(#dk)"/><rect x="108" y="18" width="32" height="10" rx="3" fill="#59636e"/><rect x="142" y="18" width="32" height="10" rx="3" fill="#59636e"/>'
+      + '<rect x="112" y="34" width="58" height="46" rx="6" fill="#1d2228"/><rect x="116" y="38" width="24" height="38" rx="4" fill="#2f8fd8" opacity=".35"/><rect x="142" y="38" width="24" height="38" rx="4" fill="#8a96a3" opacity=".3"/>'
+      + '<rect x="104" y="128" width="74" height="10" rx="3" fill="#2b3138"/><circle cx="141" cy="92" r="2.5" fill="var(--st,var(--acc))"/>';
+  } else if (kind === 2) {
+    dock = '<rect x="118" y="46" width="52" height="90" rx="9" fill="url(#dk)"/><rect x="124" y="54" width="40" height="34" rx="5" fill="#1d2228"/>'
+      + '<rect x="128" y="58" width="32" height="26" rx="3" fill="#8a96a3" opacity=".3"/><rect x="112" y="128" width="64" height="10" rx="3" fill="#2b3138"/><circle cx="144" cy="100" r="2.5" fill="var(--st,var(--acc))"/>';
+  } else {
+    dock = '<rect x="128" y="86" width="36" height="50" rx="7" fill="url(#dk)"/><circle cx="146" cy="100" r="2.5" fill="var(--st,var(--acc))"/>';
+  }
+  return '<svg class="art" viewBox="20 6 170 150"><defs><linearGradient id="dk" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4a535d"/><stop offset="1" stop-color="#2b3138"/></linearGradient>'
+    + '<radialGradient id="rt" cx=".4" cy=".3" r=".8"><stop offset="0" stop-color="#6b7580"/><stop offset="1" stop-color="#363d45"/></radialGradient></defs>'
+    + dock + '<g transform="translate(-14 0)">' + robot + '</g></svg>';
+}
+const picture = () => D.image ? '<img alt="" src="' + D.image + '">' : art(D.art);
 
 function renderCtrl() {
   const chosen = D.rooms.filter(r => r.on);
@@ -136,16 +164,20 @@ function renderCtrl() {
     h += '<div class="sec">' + T('Rooms') + '</div><div class="rooms">'
       + D.rooms.map(r => '<button class="room' + (r.on ? ' on' : '') + '" data-room="' + r.ident + '" title="' + esc(r.name) + '">' + esc(r.name) + '</button>').join('') + '</div>';
   }
-  h += '<div class="sec">' + T('Settings') + '</div><div class="sel">' + select('FanPower', D.fan) + select('WaterMode', D.water) + select('MopMode', D.mop);
+  h += '<div class="sec">' + T('Settings') + '</div>' + options('FanPower', D.fan) + options('WaterMode', D.water) + options('MopMode', D.mop);
   if (D.repeat !== null) {
-    h += '<label>' + T('Passes') + '</label><div class="seg">' + [1, 2, 3].map(n => '<button data-repeat="' + n + '" class="' + (D.repeat === n ? 'on' : '') + '">' + n + '×</button>').join('') + '</div>';
+    h += '<div class="set"><label>' + T('Passes') + '</label><div class="opts">' + [1, 2, 3].map(n => '<button data-repeat="' + n + '" class="' + (D.repeat === n ? 'on' : '') + '">' + n + '×</button>').join('') + '</div></div>';
   }
-  $('ctrl').innerHTML = h + '</div>';
+  $('ctrl').innerHTML = h;
 }
 
 function renderMap() {
-  $('map').innerHTML = D.map ? '<img alt="" src="' + D.map + '">'
-    : '<div class="none">' + (D.image ? '<img alt="" src="' + D.image + '">' : ICON.robot) + '<div>' + T('No map') + '</div></div>';
+  // Floors (maps of the robot): buttons if there are several, otherwise just the name
+  let floors = '';
+  if (D.floors.length > 1) floors = '<div class="floors">' + D.floors.map(f => '<button data-floor="' + f[0] + '" class="' + (f[0] === D.floor ? 'on' : '') + '">' + esc(f[1]) + '</button>').join('') + '</div>';
+  else if (D.floors.length === 1 && D.floors[0][1]) floors = '<div class="floors"><span>' + esc(D.floors[0][1]) + '</span></div>';
+  $('map').innerHTML = floors + (D.map ? '<img alt="" src="' + D.map + '">'
+    : '<div class="none">' + picture() + '<div>' + T('No map') + '</div></div>');
 }
 
 function renderTop() {
@@ -155,7 +187,7 @@ function renderTop() {
 function renderInfo() {
   const r = 34, c = 2 * Math.PI * r, p = Math.max(0, Math.min(100, D.battery));
   const bc = p < 20 ? 'var(--bad)' : (p < 40 ? 'var(--warn)' : 'var(--ok)');
-  let h = D.image ? '<div class="robot"><img alt="" src="' + D.image + '"></div>' : '';
+  let h = '<div class="robot">' + picture() + '</div>';
   h += '<div class="hero"><svg class="ring" viewBox="0 0 84 84"><circle class="trk" cx="42" cy="42" r="' + r + '" fill="none" stroke-width="7"/>'
     + '<circle cx="42" cy="42" r="' + r + '" fill="none" stroke="' + bc + '" stroke-width="7" stroke-linecap="round" stroke-dasharray="' + (c * p / 100) + ' ' + c + '" transform="rotate(-90 42 42)"/>'
     + '<text x="42" y="45" text-anchor="middle">' + p + '%</text><text class="s" x="42" y="58" text-anchor="middle">' + T(D.charging ? 'Charging' : 'Battery') + '</text></svg>'
@@ -201,10 +233,12 @@ document.addEventListener('click', e => {
   if (b.dataset.ctrl) act('Control', parseInt(b.dataset.ctrl, 10));
   else if (b.dataset.room) { const r = D.rooms.find(x => x.ident === b.dataset.room); if (r) { r.on = !r.on; renderCtrl(); act(r.ident, r.on); } }
   else if (b.dataset.repeat) { D.repeat = parseInt(b.dataset.repeat, 10); renderCtrl(); act('Repeat', D.repeat); }
-});
-document.addEventListener('change', e => {
-  const s = e.target.closest('select');
-  if (s) act(s.dataset.ident, parseInt(s.value, 10));
+  else if (b.dataset.floor) { D.floor = parseInt(b.dataset.floor, 10); renderMap(); act('Floor', D.floor); }
+  else if (b.dataset.ident) {
+    const key = {FanPower: 'fan', WaterMode: 'water', MopMode: 'mop'}[b.dataset.ident];
+    if (key && D[key]) D[key].value = parseInt(b.dataset.value, 10);
+    renderCtrl(); act(b.dataset.ident, parseInt(b.dataset.value, 10));
+  }
 });
 
 function handleMessage(data) {

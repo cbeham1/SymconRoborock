@@ -146,12 +146,12 @@ The protocol was reimplemented following the open source project
 The vacuum instance itself is a tile of the tile visualization (HTML-SDK, since 1.8): link the **instance** on a page
 and give it a large tile. It adapts to its size:
 
-* **middle:** map – optional property *Map* (an HTML box containing an image of the map, e.g. from a map script, or an
+* **middle:** floor buttons if the robot has several maps (switching loads the map, rooms are read again), map – optional property *Map* (an HTML box containing an image of the map, e.g. from a map script, or an
   image object); a badge shows the current state
 * **left:** big main button (*Clean rooms (n)* with selected rooms, otherwise *Clean everything*; *Pause* while
   cleaning, *Resume* for an interrupted task), buttons *Stop*, *Dock*, *Locate*, room selection as tiles,
-  suction power / water flow / mop mode as selection lists, passes 1×/2×/3×
-* **right:** picture of the robot (optional property *Picture of the robot*), battery ring and state, error banner, last cleaning (duration, area), statistics, maintenance bars,
+  suction power / water flow / mop mode as buttons (easy to use on wall tablets), passes 1×/2×/3×
+* **right:** picture of the robot (optional property *Picture of the robot*, otherwise an illustration: robot with multifunction station, auto-empty dock or charging dock), battery ring and state, error banner, last cleaning (duration, area), statistics, maintenance bars,
   time of the last update (also as variable *Last update*, written after every successful query)
 
 Narrower tiles put the map on top and the two columns below; on very small tiles everything is stacked. Commands go

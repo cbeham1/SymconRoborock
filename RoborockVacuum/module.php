@@ -120,6 +120,7 @@ class RoborockCloudVacuum extends IPSModule
         $this->RegisterPropertyInteger('TileTheme', 0);
         $this->RegisterPropertyInteger('MapVariable', 0);
         $this->RegisterPropertyInteger('RobotImage', 0);
+        $this->RegisterPropertyInteger('RobotArt', 0);
 
         $this->RegisterAttributeString('Rooms', '[]');
         $this->RegisterAttributeBoolean('RoomsLoaded', false);
@@ -127,6 +128,8 @@ class RoborockCloudVacuum extends IPSModule
         $this->RegisterAttributeBoolean('HasMop', false);
         $this->RegisterAttributeInteger('UpdateCount', 0);
         $this->RegisterAttributeString('Model', '');
+        $this->RegisterAttributeString('Maps', '[]');
+        $this->RegisterAttributeInteger('RoomsMap', -1);
 
         $this->RegisterTimer('Update', 0, 'RRV_Update($_IPS[\'TARGET\']);');
 
@@ -214,6 +217,9 @@ class RoborockCloudVacuum extends IPSModule
                 break;
             case 'Volume':
                 $ok = $this->SetVolume((int) $Value);
+                break;
+            case 'Floor':
+                $ok = $this->LoadFloor((int) $Value);
                 break;
             default:
                 if (strpos((string) $Ident, 'Room') === 0) {
@@ -321,8 +327,24 @@ class RoborockCloudVacuum extends IPSModule
     /** Reads the rooms of the map (segment IDs and names) and creates a switch per room. */
     public function LoadRooms(): string
     {
-        $results = $this->Request('RPC', ['Calls' => [['method' => 'get_room_mapping', 'params' => []]]]);
+        $results = $this->Request('RPC', ['Calls' => [['method' => 'get_room_mapping', 'params' => []], ['method' => 'get_multi_maps_list', 'params' => []], ['method' => 'get_status', 'params' => []]]]);
         $mapping = $results[0]['result'] ?? null;
+        // Floors (several maps of the robot); the rooms belong to the map that is currently loaded
+        $list = $this->FirstEntry($results[1]['result'] ?? null);
+        if ($list !== null) {
+            $maps = [];
+            foreach ((array) ($list['map_info'] ?? []) as $map) {
+                if (is_array($map) && isset($map['mapFlag'])) {
+                    $maps[] = ['flag' => (int) $map['mapFlag'], 'name' => (string) ($map['name'] ?? '')];
+                }
+            }
+            $this->WriteAttributeString('Maps', json_encode($maps));
+            $this->MaintainFloor();
+        }
+        $status = $this->FirstEntry($results[2]['result'] ?? null);
+        if ($status !== null && isset($status['map_status']) && (int) $status['map_status'] !== 252) {
+            $this->WriteAttributeInteger('RoomsMap', (int) $status['map_status'] >> 2);
+        }
         if (!is_array($mapping)) {
             return $this->Translate('Rooms could not be read') . (isset($results[0]['error']) ? ': ' . $results[0]['error'] : '');
         }
@@ -606,6 +628,13 @@ class RoborockCloudVacuum extends IPSModule
         if (isset($status['in_cleaning'])) {
             $this->SetValueIfChanged('TaskOpen', (int) $status['in_cleaning'] > 0);
         }
+        if (isset($status['map_status']) && is_numeric($status['map_status']) && (int) $status['map_status'] !== 252) {
+            $floor = (int) $status['map_status'] >> 2;
+            $this->SetValueIfChanged('Floor', $floor);
+            if ($this->ReadAttributeBoolean('RoomsLoaded') && $this->ReadAttributeInteger('RoomsMap') !== $floor && $this->ReadPropertyBoolean('ShowRooms')) {
+                $this->LoadRooms();
+            }
+        }
         $this->SetValueIfChanged('StatusText', $this->StatusText());
     }
 
@@ -698,6 +727,41 @@ class RoborockCloudVacuum extends IPSModule
             }
         }
         $this->MaintainRoomVariables([]);
+        $this->MaintainFloor();
+    }
+
+    /** Variable "Floor" with the names of the maps, only if the robot has several maps. */
+    private function MaintainFloor(): void
+    {
+        $maps = json_decode($this->ReadAttributeString('Maps'), true) ?: [];
+        $profile = 'RRV.Floor.' . $this->InstanceID;
+        $show = count($maps) > 1;
+        if ($show) {
+            if (IPS_VariableProfileExists($profile)) {
+                IPS_DeleteVariableProfile($profile);
+            }
+            IPS_CreateVariableProfile($profile, VARIABLETYPE_INTEGER);
+            IPS_SetVariableProfileIcon($profile, 'Stairs');
+            foreach ($maps as $map) {
+                IPS_SetVariableProfileAssociation($profile, $map['flag'], $map['name'] !== '' ? $map['name'] : sprintf($this->Translate('Map %d'), $map['flag'] + 1), '', -1);
+            }
+        }
+        $this->MaintainVariable('Floor', $this->Translate('Floor'), VARIABLETYPE_INTEGER, $show ? $profile : '', 15, $show);
+        if ($show) {
+            $this->EnableAction('Floor');
+        } elseif (IPS_VariableProfileExists($profile)) {
+            IPS_DeleteVariableProfile($profile);
+        }
+    }
+
+    /** Loads another map (floor); the rooms are read again once the robot reports the new map. */
+    private function LoadFloor(int $flag): bool
+    {
+        if (!$this->Command('load_multi_map', [$flag])) {
+            return false;
+        }
+        $this->SetValueIfChanged('Floor', $flag);
+        return true;
     }
 
     /** One switch per room (selection for "Clean selected rooms"); removes switches of rooms that no longer exist. */
@@ -798,6 +862,10 @@ class RoborockCloudVacuum extends IPSModule
             'water'     => $options('WaterMode'),
             'mop'       => $options('MopMode'),
             'repeat'    => $id('Repeat') > 0 ? (int) $this->GetValue('Repeat') : null,
+            'floors'    => array_map(fn (array $map): array => [$map['flag'], $map['name']], json_decode($this->ReadAttributeString('Maps'), true) ?: []),
+            'floor'     => $id('Floor') > 0 ? (int) $this->GetValue('Floor') : $this->ReadAttributeInteger('RoomsMap'),
+            'art'       => $this->ReadPropertyInteger('RobotArt') > 0 ? $this->ReadPropertyInteger('RobotArt')
+                : ($this->ReadAttributeBoolean('HasWater') && $this->ReadAttributeBoolean('HasMop') ? 1 : 3),
             'rooms'     => $rooms,
             'parts'     => $parts,
             'stats'     => $stats,
