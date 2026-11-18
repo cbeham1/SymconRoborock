@@ -733,7 +733,8 @@ class RoborockCloudVacuum extends IPSModule
         $id = fn (string $ident): int => (int) @$this->GetIDForIdent($ident);
         $value = fn (string $ident) => $id($ident) > 0 ? $this->GetValue($ident) : null;
         $formatted = fn (string $ident): string => $id($ident) > 0 ? GetValueFormatted($id($ident)) : '–';
-        $options = function (string $ident) use ($id): ?array {
+        $options = function (string $ident) use ($id): ?array
+        {
             $vid = $id($ident);
             if ($vid === 0) {
                 return null;
