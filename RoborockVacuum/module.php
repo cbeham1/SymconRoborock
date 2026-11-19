@@ -125,6 +125,12 @@ class RoborockCloudVacuum extends IPSModule
         $this->RegisterPropertyInteger('TileTheme', 0);
         $this->RegisterPropertyInteger('MapVariable', 0);
         $this->RegisterPropertyBoolean('ShowMap', true);
+        $this->RegisterPropertyInteger('NotifyVisualization', 0);
+        $this->RegisterPropertyInteger('NotifyScript', 0);
+        $this->RegisterPropertyBoolean('NotifyStart', true);
+        $this->RegisterPropertyBoolean('NotifyEnd', true);
+        $this->RegisterPropertyBoolean('NotifyRecharge', true);
+        $this->RegisterPropertyBoolean('NotifyError', true);
         $this->RegisterPropertyInteger('RobotImage', 0);
         $this->RegisterPropertyInteger('RobotArt', 0);
         $this->RegisterPropertyInteger('MapRotation', 0);
@@ -140,6 +146,7 @@ class RoborockCloudVacuum extends IPSModule
         $this->RegisterAttributeInteger('RoomsMap', -1);
         $this->RegisterAttributeInteger('MapTime', 0);
         $this->RegisterAttributeBoolean('MapActive', false);
+        $this->RegisterAttributeString('Session', '{}');
 
         $this->RegisterTimer('Update', 0, 'RRV_Update($_IPS[\'TARGET\']);');
 
@@ -342,6 +349,7 @@ class RoborockCloudVacuum extends IPSModule
         $active = in_array((int) $this->GetValue('State'), array_merge(self::CLEANING_STATES, [6, 15]), true);
         $interval = $active ? $this->ReadPropertyInteger('CleaningInterval') : $this->ReadPropertyInteger('UpdateInterval');
         $this->SetTimerInterval('Update', max(self::MIN_INTERVAL, $interval) * 1000);
+        $this->TrackCleaning();
         // Map: with every update while the robot is active, once after it has returned, otherwise every hour
         if ($this->ReadPropertyBoolean('ShowMap') && $online) {
             $finished = !$active && $this->ReadAttributeBoolean('MapActive') && in_array((int) $this->GetValue('State'), [8, 22, 23, 100], true);
@@ -788,6 +796,7 @@ class RoborockCloudVacuum extends IPSModule
         $this->MaintainVariable('Volume', $this->Translate('Volume'), VARIABLETYPE_INTEGER, '~Intensity.100', 13, true);
         $this->MaintainVariable('LastUpdate', $this->Translate('Last update'), VARIABLETYPE_INTEGER, '~UnixTimestamp', 14, true);
         $this->MaintainVariable('Map', $this->Translate('Map'), VARIABLETYPE_STRING, '~HTMLBox', 16, $this->ReadPropertyBoolean('ShowMap'));
+        $this->MaintainVariable('LastCleaning', $this->Translate('Last cleaning'), VARIABLETYPE_STRING, '', 17, true);
         $this->EnableAction('Volume');
         $this->MaintainVariable('MainBrush', $this->Translate('Main brush'), VARIABLETYPE_INTEGER, 'RRV.Percent', 20, $consumables);
         $this->MaintainVariable('SideBrush', $this->Translate('Side brush'), VARIABLETYPE_INTEGER, 'RRV.Percent', 21, $consumables);
@@ -1125,6 +1134,80 @@ class RoborockCloudVacuum extends IPSModule
         }
         return '<svg xmlns="http://www.w3.org/2000/svg" width="' . ($width * 2) . '" height="' . ($height * 2) . '" viewBox="0 0 ' . $width . ' ' . $height . '" shape-rendering="crispEdges">'
             . '<g transform="translate(' . $width . ' ' . $height . ') rotate(180)">' . $rects . $overlay . '</g>' . $labels . '</svg>';
+    }
+
+    /**
+     * Cleaning session: start, recharging (task open while charging), continued, end (docked without open task for 90 s)
+     * and errors. Writes "Last cleaning" and sends the notifications.
+     */
+    private function TrackCleaning(): void
+    {
+        $session = json_decode($this->ReadAttributeString('Session'), true) ?: [];
+        $session += ['active' => false, 'start' => 0, 'rooms' => '', 'recharging' => false, 'endPending' => 0, 'error' => 0];
+        $state = (int) $this->GetValue('State');
+        $error = (int) $this->GetValue('Error');
+        $now = time();
+        if (in_array($state, self::CLEANING_STATES, true)) {
+            $session['endPending'] = 0;
+            if (!$session['active']) {
+                $selected = array_filter($this->Rooms(), fn (array $room): bool => (bool) @$this->GetValue('Room' . $room['segment']));
+                $session['active'] = true;
+                $session['start'] = $now;
+                $session['recharging'] = false;
+                $session['rooms'] = $state === 18 ? implode(', ', array_column($selected, 'name')) : '';
+                $this->Notify('Start', $this->Translate('Cleaning started') . ($session['rooms'] !== '' ? ': ' . $session['rooms'] : ''));
+            } elseif ($session['recharging']) {
+                $session['recharging'] = false;
+                $this->Notify('Recharge', sprintf($this->Translate('Cleaning continued (battery %d %%)'), (int) $this->GetValue('Battery')));
+            }
+        } elseif ($session['active'] && in_array($state, [8, 22, 23, 100], true)) {
+            if ($state === 8 && $this->GetValue('TaskOpen')) {
+                $session['endPending'] = 0;
+                if (!$session['recharging']) {
+                    $session['recharging'] = true;
+                    $this->Notify('Recharge', sprintf($this->Translate('Recharging (battery %d %%), cleaning will continue'), (int) $this->GetValue('Battery')));
+                }
+            } elseif ($session['endPending'] === 0) {
+                $session['endPending'] = $now;
+            } elseif ($now - $session['endPending'] >= 90) {
+                $days = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+                $text = $this->Translate($days[(int) date('w', $session['start'])]) . ' ' . date('d.m. H:i', $session['start']) . '–' . date('H:i', $session['endPending'])
+                    . ' · ' . GetValueFormatted($this->GetIDForIdent('CleanTime')) . ' · ' . GetValueFormatted($this->GetIDForIdent('CleanArea'))
+                    . ($session['rooms'] !== '' ? ' · ' . $session['rooms'] : '');
+                $this->SetValue('LastCleaning', $text);
+                $this->Notify('End', sprintf(
+                    $this->Translate('Cleaning finished: %s, %s, battery %d %%'),
+                    GetValueFormatted($this->GetIDForIdent('CleanTime')),
+                    GetValueFormatted($this->GetIDForIdent('CleanArea')),
+                    (int) $this->GetValue('Battery')
+                ));
+                $session['active'] = false;
+                $session['endPending'] = 0;
+            }
+        }
+        if ($error > 0 && $error !== $session['error']) {
+            $this->Notify('Error', $this->ErrorText($error));
+        }
+        $session['error'] = $error;
+        $this->WriteAttributeString('Session', json_encode($session));
+    }
+
+    /** Notification to the selected tile visualization and/or script (parameters EVENT, TEXT, INSTANCE). */
+    private function Notify(string $event, string $text): void
+    {
+        $this->SendDebug('Notify', $event . ': ' . $text, 0);
+        if (!$this->ReadPropertyBoolean('Notify' . $event)) {
+            return;
+        }
+        $title = IPS_GetName($this->InstanceID);
+        $visualization = $this->ReadPropertyInteger('NotifyVisualization');
+        if ($visualization > 0 && IPS_InstanceExists($visualization) && function_exists('VISU_PostNotification')) {
+            @VISU_PostNotification($visualization, $title, $text, $event === 'Error' ? 'Warning' : 'Information', $this->InstanceID);
+        }
+        $script = $this->ReadPropertyInteger('NotifyScript');
+        if ($script > 0 && IPS_ScriptExists($script)) {
+            IPS_RunScriptEx($script, ['EVENT' => $event, 'TEXT' => $text, 'TITLE' => $title, 'INSTANCE' => $this->InstanceID]);
+        }
     }
 
     /** Picture of the robot for the cleaning tile (image media object) as data URL. */

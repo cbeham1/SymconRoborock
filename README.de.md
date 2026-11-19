@@ -177,6 +177,13 @@ AES-CBC mit dem Nonce der Anfrage, gzip) und zeichnet sie als SVG in die Variabl
 Station und die Raumnamen der Raumliste. Beim Reinigen und auf dem Weg zur Station bei jeder Abfrage, nach der Rückkehr
 einmal, sonst stündlich; Knopf *Karte jetzt lesen*. Die Reinigungskachel nutzt diese Karte, solange keine *andere Karte* gewählt ist.
 
+## Benachrichtigungen
+
+Die Instanz erkennt Start, Zwischenladen (Auftrag offen beim Laden) und Fortsetzen, Ende (90 s angedockt ohne offenen
+Auftrag) und Fehler, schreibt die Variable **Letzte Reinigung** (z. B. „Mi 18.11. 14:44–14:53 · 9 min · 5,2 m² · Flur“) und
+schickt optional eine Benachrichtigung an eine Kachel-Visualisierung (`VISU_PostNotification`) und/oder startet ein Skript
+mit den Parametern `EVENT` (Start, End, Recharge, Error), `TEXT`, `TITLE` und `INSTANCE` – z. B. für Sprachdurchsagen.
+
 ## Reinigungskachel
 
 Die Sauger-Instanz ist selbst eine Kachel der Kachel-Visualisierung (HTML-SDK, ab 1.8): die **Instanz** auf einer Seite

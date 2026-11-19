@@ -148,6 +148,13 @@ AES-CBC with the nonce of the request, gzip) and draws it as SVG into the variab
 dock and the room names of the room list. While the robot is cleaning or driving to the dock with every update, once after it
 has returned, otherwise every hour; button *Read map now*. The cleaning tile uses this map unless *Other map* is selected.
 
+## Notifications
+
+The instance recognises start, recharging (task still open while charging) and continuing, end (docked without open task
+for 90 s) and errors, writes the variable **Last cleaning** (e.g. "We 18.11. 14:44–14:53 · 9 min · 5.2 m² · Hallway") and
+optionally sends a notification to a tile visualization (`VISU_PostNotification`) and/or runs a script with the
+parameters `EVENT` (Start, End, Recharge, Error), `TEXT`, `TITLE` and `INSTANCE` – e.g. for voice announcements.
+
 ## Cleaning tile
 
 The vacuum instance itself is a tile of the tile visualization (HTML-SDK, since 1.8): link the **instance** on a page

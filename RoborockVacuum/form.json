@@ -181,6 +181,54 @@
                     ]
                 }
             ]
+        },
+        {
+            "type": "ExpansionPanel",
+            "caption": "Notifications",
+            "items": [
+                {
+                    "type": "Label",
+                    "caption": "Start, recharging and continuing, end and errors of a cleaning. The variable \"Last cleaning\" is always written."
+                },
+                {
+                    "type": "SelectInstance",
+                    "name": "NotifyVisualization",
+                    "caption": "Tile visualization (notification)",
+                    "validModules": [
+                        "{B5B875BB-9B76-45FD-4E67-2607E45B3AC4}"
+                    ]
+                },
+                {
+                    "type": "SelectScript",
+                    "name": "NotifyScript",
+                    "caption": "Script (optional, parameters EVENT, TEXT, TITLE, INSTANCE)"
+                },
+                {
+                    "type": "RowLayout",
+                    "items": [
+                        {
+                            "type": "CheckBox",
+                            "name": "NotifyStart",
+                            "caption": "Start"
+                        },
+                        {
+                            "type": "CheckBox",
+                            "name": "NotifyEnd",
+                            "caption": "End"
+                        },
+                        {
+                            "type": "CheckBox",
+                            "name": "NotifyRecharge",
+                            "caption": "Recharging"
+                        },
+                        {
+                            "type": "CheckBox",
+                            "name": "NotifyError",
+                            "caption": "Error"
+                        }
+                    ]
+                }
+            ]
         }
     ],
     "actions": [

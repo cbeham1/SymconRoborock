@@ -173,7 +173,24 @@
             "Read the map from the robot (variable \"Map\": while cleaning with every update, otherwise every hour)": "Karte vom Roboter lesen (Variable „Karte“: beim Reinigen bei jeder Abfrage, sonst stündlich)",
             "Other map (optional, instead of the own map: HTML box with an image of the map, or image)": "Andere Karte (optional, statt der eigenen: HTML-Box mit Kartenbild oder Bild)",
             "Read map now": "Karte jetzt lesen",
-            "Map": "Karte"
+            "Map": "Karte",
+            "Notifications": "Benachrichtigungen",
+            "Start, recharging and continuing, end and errors of a cleaning. The variable \"Last cleaning\" is always written.": "Start, Zwischenladen und Fortsetzen, Ende und Fehler einer Reinigung. Die Variable „Letzte Reinigung“ wird immer geschrieben.",
+            "Tile visualization (notification)": "Kachel-Visualisierung (Benachrichtigung)",
+            "Script (optional, parameters EVENT, TEXT, TITLE, INSTANCE)": "Skript (optional, Parameter EVENT, TEXT, TITLE, INSTANCE)",
+            "End": "Ende",
+            "Recharging": "Zwischenladen",
+            "Cleaning started": "Reinigung gestartet",
+            "Cleaning continued (battery %d %%)": "Reinigung fortgesetzt (Akku %d %%)",
+            "Recharging (battery %d %%), cleaning will continue": "Zwischenladen (Akku %d %%), Reinigung wird fortgesetzt",
+            "Cleaning finished: %s, %s, battery %d %%": "Reinigung beendet: %s, %s, Akku %d %%",
+            "Su": "So",
+            "Mo": "Mo",
+            "Tu": "Di",
+            "We": "Mi",
+            "Th": "Do",
+            "Fr": "Fr",
+            "Sa": "Sa"
         }
     }
 }
