@@ -104,6 +104,10 @@ class RoborockCloudVacuum extends IPSModule
         'Sensors'   => ['sensor_dirty_time', 108000, 0],
     ];
     private const CLEANING_STATES = [5, 7, 11, 16, 17, 18, 26, 29, 32];
+    private const MAP_IDLE_INTERVAL = 3600;
+    private const MAP_PALETTE = ['#8bcbbb', '#a6a5dc', '#e7b9cf', '#8ab7d6', '#e3c980', '#b9a0e3', '#a6cdb3', '#df98bf', '#f0df8a', '#a5bfd2',
+        '#a8b6e6', '#cfb1a2', '#90c6cb', '#d5b4da', '#b2c889', '#e5b2a0', '#a6c6df', '#b8b4d9', '#e6ce96', '#9fcfbe', '#d8acc8', '#9fbed5',
+        '#b8cba3', '#e0b49b', '#a4c7dc', '#a5bbcf', '#e2bdd1', '#a6cbb9', '#c6b1df', '#e2c28e', '#b1d0df', '#c6c5a4'];
 
     public function Create(): void
     {
@@ -120,6 +124,7 @@ class RoborockCloudVacuum extends IPSModule
         $this->RegisterPropertyBoolean('ShowTile', true);
         $this->RegisterPropertyInteger('TileTheme', 0);
         $this->RegisterPropertyInteger('MapVariable', 0);
+        $this->RegisterPropertyBoolean('ShowMap', true);
         $this->RegisterPropertyInteger('RobotImage', 0);
         $this->RegisterPropertyInteger('RobotArt', 0);
         $this->RegisterPropertyInteger('MapRotation', 0);
@@ -133,6 +138,8 @@ class RoborockCloudVacuum extends IPSModule
         $this->RegisterAttributeString('Model', '');
         $this->RegisterAttributeString('Maps', '[]');
         $this->RegisterAttributeInteger('RoomsMap', -1);
+        $this->RegisterAttributeInteger('MapTime', 0);
+        $this->RegisterAttributeBoolean('MapActive', false);
 
         $this->RegisterTimer('Update', 0, 'RRV_Update($_IPS[\'TARGET\']);');
 
@@ -335,6 +342,18 @@ class RoborockCloudVacuum extends IPSModule
         $active = in_array((int) $this->GetValue('State'), array_merge(self::CLEANING_STATES, [6, 15]), true);
         $interval = $active ? $this->ReadPropertyInteger('CleaningInterval') : $this->ReadPropertyInteger('UpdateInterval');
         $this->SetTimerInterval('Update', max(self::MIN_INTERVAL, $interval) * 1000);
+        // Map: with every update while the robot is active, once after it has returned, otherwise every hour
+        if ($this->ReadPropertyBoolean('ShowMap') && $online) {
+            $finished = !$active && $this->ReadAttributeBoolean('MapActive') && in_array((int) $this->GetValue('State'), [8, 22, 23, 100], true);
+            if ($active || $finished || time() - $this->ReadAttributeInteger('MapTime') >= self::MAP_IDLE_INTERVAL) {
+                if ($this->UpdateMap() && $finished) {
+                    $this->WriteAttributeBoolean('MapActive', false);
+                }
+            }
+            if ($active) {
+                $this->WriteAttributeBoolean('MapActive', true);
+            }
+        }
 
         $volume = $results[1]['result'] ?? null;
         $volume = is_array($volume) ? ($volume[0] ?? null) : $volume;
@@ -470,6 +489,29 @@ class RoborockCloudVacuum extends IPSModule
         $this->SendDebug('Resume', 'No interrupted task', 0);
         echo $this->Translate('No interrupted cleaning task');
         return false;
+    }
+
+    /** Reads the map from the robot (get_map_v1) and draws it into the variable "Map". */
+    public function UpdateMap(): bool
+    {
+        if (!$this->ReadPropertyBoolean('ShowMap')) {
+            return false;
+        }
+        $results = $this->Request('RPC', ['Calls' => [['method' => 'get_map_v1', 'params' => []]]]);
+        $data = is_string($results[0]['result'] ?? null) ? base64_decode($results[0]['result'], true) : false;
+        if (!is_string($data)) {
+            $this->SendDebug('Map', (string) ($results[0]['error'] ?? 'no map'), 0);
+            return false;
+        }
+        $svg = $this->RenderMap($data);
+        if ($svg === '') {
+            return false;
+        }
+        $this->WriteAttributeInteger('MapTime', time());
+        $this->SetValue('Map', '<div style="display:flex;justify-content:center;align-items:center;height:100%"><img alt="" style="max-width:100%;max-height:100%;object-fit:contain" src="data:image/svg+xml;base64,'
+            . base64_encode($svg) . '"></div>');
+        $this->UpdateVisualizationValue(json_encode(['mapOnly' => true, 'map' => $this->MapImage(), 'image' => $this->RobotImage()]));
+        return true;
     }
 
     /** Cleans the given rooms. $Segments = segment IDs separated by commas (e.g. "16,18"), $Repeat = 1..3 passes. */
@@ -745,6 +787,7 @@ class RoborockCloudVacuum extends IPSModule
         $this->MaintainVariable('Online', $this->Translate('Online'), VARIABLETYPE_BOOLEAN, '', 12, true);
         $this->MaintainVariable('Volume', $this->Translate('Volume'), VARIABLETYPE_INTEGER, '~Intensity.100', 13, true);
         $this->MaintainVariable('LastUpdate', $this->Translate('Last update'), VARIABLETYPE_INTEGER, '~UnixTimestamp', 14, true);
+        $this->MaintainVariable('Map', $this->Translate('Map'), VARIABLETYPE_STRING, '~HTMLBox', 16, $this->ReadPropertyBoolean('ShowMap'));
         $this->EnableAction('Volume');
         $this->MaintainVariable('MainBrush', $this->Translate('Main brush'), VARIABLETYPE_INTEGER, 'RRV.Percent', 20, $consumables);
         $this->MaintainVariable('SideBrush', $this->Translate('Side brush'), VARIABLETYPE_INTEGER, 'RRV.Percent', 21, $consumables);
@@ -950,6 +993,9 @@ class RoborockCloudVacuum extends IPSModule
     {
         $map = $this->ReadPropertyInteger('MapVariable');
         if ($map <= 0) {
+            $map = (int) @$this->GetIDForIdent('Map');
+        }
+        if ($map <= 0) {
             return '';
         }
         if (IPS_MediaExists($map)) {
@@ -967,6 +1013,118 @@ class RoborockCloudVacuum extends IPSModule
             return 'data:image/svg+xml;base64,' . base64_encode($match[0]);
         }
         return '';
+    }
+
+    /**
+     * Draws the RRMap data as SVG: rooms in colours, walls, path, robot and dock, room names in the middle of each room.
+     * Block types: 1 robot position, 2 image (one byte per pixel: segment << 3 | type), 3 path, 8 dock position.
+     */
+    private function RenderMap(string $raw): string
+    {
+        $u16 = static fn (int $offset): int => unpack('v', substr($raw, $offset, 2))[1];
+        $u32 = static fn (int $offset): int => unpack('V', substr($raw, $offset, 4))[1];
+        if (strlen($raw) < 48 || substr($raw, 0, 2) !== 'rr') {
+            return '';
+        }
+        $offset = $u16(2);
+        $image = null;
+        $blocks = [];
+        $width = $height = $originX = $originY = 0;
+        while ($offset + 8 <= strlen($raw)) {
+            $type = $u16($offset);
+            $headerSize = $u16($offset + 2);
+            $dataSize = $u32($offset + 4);
+            if ($headerSize < 8 || $offset + $headerSize + $dataSize > strlen($raw)) {
+                break;
+            }
+            if (in_array($type, [1, 3, 8], true)) {
+                $blocks[$type] = substr($raw, $offset + $headerSize, $dataSize);
+            }
+            if ($type === 2 && $headerSize >= 28) {
+                $originY = $u32($offset + 12);
+                $originX = $u32($offset + 16);
+                $height = $u32($offset + 20);
+                $width = $u32($offset + 24);
+                if ($width * $height === $dataSize && $width >= 10 && $height >= 10 && $width <= 2000 && $height <= 2000) {
+                    $image = substr($raw, $offset + $headerSize, $dataSize);
+                }
+            }
+            $offset += $headerSize + $dataSize;
+        }
+        if ($image === null) {
+            $this->SendDebug('Map', 'No image block', 0);
+            return '';
+        }
+        $color = static function (int $value): string
+        {
+            if (($value & 7) === 0) {
+                return '#667487';
+            }
+            return self::MAP_PALETTE[($value >> 3) % count(self::MAP_PALETTE)];
+        };
+        $names = [];
+        foreach ($this->Rooms() as $room) {
+            $names[$room['segment']] = $room['name'];
+        }
+        $rects = '';
+        $stats = [];
+        for ($row = 0; $row < $height; $row++) {
+            $col = 0;
+            while ($col < $width) {
+                $value = ord($image[$row * $width + $col]);
+                if ($value === 0) {
+                    $col++;
+                    continue;
+                }
+                $fill = $color($value);
+                $start = $col++;
+                while ($col < $width && ($next = ord($image[$row * $width + $col])) !== 0 && $color($next) === $fill) {
+                    $col++;
+                }
+                $segment = $value >> 3;
+                if (isset($names[$segment]) && ($value & 7) !== 0) {
+                    $run = $col - $start;
+                    $stats[$segment] = $stats[$segment] ?? ['n' => 0, 'x' => 0.0, 'y' => 0.0];
+                    $stats[$segment]['n'] += $run;
+                    $stats[$segment]['x'] += ($start + $col - 1) * $run / 2;
+                    $stats[$segment]['y'] += $row * $run;
+                }
+                $rects .= '<rect x="' . $start . '" y="' . ($height - 1 - $row) . '" width="' . ($col - $start) . '" height="1" fill="' . $fill . '"/>';
+            }
+        }
+        // Path, robot and dock: 50 map units per pixel
+        $project = static fn (int $x, int $y): array => [round($x / 50 - $originX, 2), round($height - 1 - ($y / 50 - $originY), 2)];
+        $overlay = '';
+        if (isset($blocks[3]) && strlen($blocks[3]) >= 8 && strlen($blocks[3]) % 4 === 0) {
+            $points = [];
+            for ($i = 0; $i + 4 <= strlen($blocks[3]); $i += 4) {
+                $point = unpack('v2', substr($blocks[3], $i, 4));
+                $points[] = implode(',', $project($point[1], $point[2]));
+            }
+            $overlay .= '<polyline points="' . implode(' ', $points) . '" fill="none" stroke="#19d3e8" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" opacity="0.92"/>';
+        }
+        if (isset($blocks[8]) && strlen($blocks[8]) >= 8) {
+            $point = unpack('V2', substr($blocks[8], 0, 8));
+            [$x, $y] = $project($point[1], $point[2]);
+            $overlay .= '<circle cx="' . $x . '" cy="' . $y . '" r="5.5" fill="#ffcc4d" stroke="#202b3a" stroke-width="1.5"/><circle cx="' . $x . '" cy="' . $y . '" r="1.5" fill="#202b3a"/>';
+        }
+        if (isset($blocks[1]) && strlen($blocks[1]) >= 8) {
+            $point = unpack('V2', substr($blocks[1], 0, 8));
+            [$x, $y] = $project($point[1], $point[2]);
+            $overlay .= '<rect x="' . ($x - 4) . '" y="' . ($y - 4) . '" width="8" height="8" rx="2" fill="#ffffff" stroke="#29364a" stroke-width="1.2"/>';
+        }
+        // Room names upright in the middle of each room (the drawing is turned by 180 degrees)
+        $labels = '';
+        foreach ($stats as $segment => $stat) {
+            if ($stat['n'] < 20) {
+                continue;
+            }
+            $labels .= '<text x="' . round($width - ($stat['x'] / $stat['n'] + 0.5), 1) . '" y="' . round($stat['y'] / $stat['n'] + 0.5, 1)
+                . '" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="9" fill="#ffffff" stroke="#1a2432" stroke-width="2.5" stroke-linejoin="round" paint-order="stroke fill">'
+                . htmlspecialchars($names[$segment], ENT_QUOTES, 'UTF-8') . '</text>';
+        }
+        return '<svg xmlns="http://www.w3.org/2000/svg" width="' . ($width * 2) . '" height="' . ($height * 2) . '" viewBox="0 0 ' . $width . ' ' . $height . '" shape-rendering="crispEdges">'
+            . '<g transform="translate(' . $width . ' ' . $height . ') rotate(180)">' . $rects . $overlay . '</g>' . $labels . '</svg>';
     }
 
     /** Picture of the robot for the cleaning tile (image media object) as data URL. */

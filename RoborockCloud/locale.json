@@ -44,7 +44,9 @@
             "MQTT login rejected": "MQTT-Anmeldung abgelehnt",
             "MQTT subscription rejected": "MQTT-Abonnement abgelehnt",
             "Connection closed": "Verbindung geschlossen",
-            "No answer from the robot (offline?)": "Keine Antwort vom Roboter (offline?)"
+            "No answer from the robot (offline?)": "Keine Antwort vom Roboter (offline?)",
+            "Map could not be decoded": "Karte konnte nicht entschlüsselt werden",
+            "No map from the robot": "Keine Karte vom Roboter"
         }
     }
 }

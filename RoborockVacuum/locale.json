@@ -169,7 +169,11 @@
             "Name in the app": "Name in der App",
             "Own name": "Eigener Name",
             "Show": "Anzeigen",
-            "Update interval while cleaning": "Aktualisierungsintervall während der Reinigung"
+            "Update interval while cleaning": "Aktualisierungsintervall während der Reinigung",
+            "Read the map from the robot (variable \"Map\": while cleaning with every update, otherwise every hour)": "Karte vom Roboter lesen (Variable „Karte“: beim Reinigen bei jeder Abfrage, sonst stündlich)",
+            "Other map (optional, instead of the own map: HTML box with an image of the map, or image)": "Andere Karte (optional, statt der eigenen: HTML-Box mit Kartenbild oder Bild)",
+            "Read map now": "Karte jetzt lesen",
+            "Map": "Karte"
         }
     }
 }

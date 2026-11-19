@@ -23,6 +23,7 @@ class RoborockCloudAccount extends IPSModule
     private const HOME_MAX_AGE = 3600;
     private const AUTO_LOGIN_PAUSE = 21600;
     private const RPC_TIMEOUT = 10;
+    private const MAP_TIMEOUT = 12;
     private const MAX_CALLS = 10;
 
     private const STATUS_LOGIN_REQUIRED = 201;
@@ -537,21 +538,38 @@ class RoborockCloudAccount extends IPSModule
 
             $endpoint = base64_encode(substr(md5($rriot['k'], true), 8, 6));
             foreach ($calls as $index => $call) {
-                $requestID = random_int(10000, 32767);
-                $params = $call['params'] ?? [];
-                $inner = [
-                    'id'       => $requestID,
-                    'method'   => $call['method'],
-                    'params'   => is_array($params) ? $params : [],
-                    'security' => ['endpoint' => $endpoint, 'nonce' => bin2hex(random_bytes(16))],
-                ];
-                $time = time();
-                $payload = json_encode(['dps' => ['101' => json_encode($inner, JSON_UNESCAPED_SLASHES)], 't' => $time], JSON_UNESCAPED_SLASHES);
-                $publish = $this->Field($topicIn) . $this->EncodeFrame($payload, $localKey, $time);
-                $this->Write($socket, "\x30" . $this->Length(strlen($publish)) . $publish);
-                $this->SendDebug('RPC', $call['method'] . ' ' . json_encode($inner['params']), 0);
-                $answer = $this->WaitForAnswer($socket, $localKey, $requestID);
-                $this->SendDebug('RPC ' . $call['method'], json_encode($answer), 0);
+                // The map arrives as separate binary message; the robot may answer "retry" while it prepares it
+                $attempts = $call['method'] === 'get_map_v1' ? 3 : 1;
+                for ($attempt = 1; $attempt <= $attempts; $attempt++) {
+                    $requestID = random_int(10000, 32767);
+                    $nonce = random_bytes(16);
+                    $params = $call['params'] ?? [];
+                    $inner = [
+                        'id'       => $requestID,
+                        'method'   => $call['method'],
+                        'params'   => is_array($params) ? $params : [],
+                        'security' => ['endpoint' => $endpoint, 'nonce' => bin2hex($nonce)],
+                    ];
+                    $time = time();
+                    $payload = json_encode(['dps' => ['101' => json_encode($inner, JSON_UNESCAPED_SLASHES)], 't' => $time], JSON_UNESCAPED_SLASHES);
+                    $publish = $this->Field($topicIn) . $this->EncodeFrame($payload, $localKey, $time);
+                    $this->Write($socket, "\x30" . $this->Length(strlen($publish)) . $publish);
+                    $this->SendDebug('RPC', $call['method'] . ' ' . json_encode($inner['params']), 0);
+                    if ($call['method'] !== 'get_map_v1') {
+                        $answer = $this->WaitForAnswer($socket, $localKey, $requestID);
+                        break;
+                    }
+                    $answer = $this->WaitForMap($socket, $localKey, $requestID, $endpoint, $nonce);
+                    if (!isset($answer['retry']) || $attempt === $attempts) {
+                        unset($answer['retry']);
+                        break;
+                    }
+                    IPS_Sleep(3000);
+                }
+                if (!isset($answer['result']) && !isset($answer['error'])) {
+                    $answer = ['error' => $this->Translate('No answer from the robot (offline?)')];
+                }
+                $this->SendDebug('RPC ' . $call['method'], $call['method'] === 'get_map_v1' && isset($answer['result']) ? strlen((string) $answer['result']) . ' bytes (base64)' : json_encode($answer), 0);
                 $results[$index] = $answer;
                 if (feof($socket)) {
                     break;
@@ -597,7 +615,7 @@ class RoborockCloudAccount extends IPSModule
                 continue;
             }
             foreach ($frames as $frame) {
-                foreach ((array) ($frame['dps'] ?? []) as $dp => $value) {
+                foreach ((array) ($frame['data']['dps'] ?? []) as $dp => $value) {
                     if ((string) $dp !== '102') {
                         continue;
                     }
@@ -614,6 +632,71 @@ class RoborockCloudAccount extends IPSModule
             }
         }
         return ['error' => $this->Translate('No answer from the robot (offline?)')];
+    }
+
+    /**
+     * Waits for the map (protocol 301): header with endpoint and request ID, then AES-CBC (key = nonce of the request)
+     * and gzip. Returns ['result' => base64 of the RRMap data], ['retry' => true] or ['error' => ...].
+     */
+    private function WaitForMap($socket, string $localKey, int $requestID, string $endpoint, string $nonce): array
+    {
+        $deadline = microtime(true) + self::MAP_TIMEOUT;
+        $retry = false;
+        while (microtime(true) < $deadline) {
+            stream_set_timeout($socket, 2);
+            $packet = $this->ReadPacket($socket);
+            if ($packet === null) {
+                if (feof($socket)) {
+                    break;
+                }
+                continue;
+            }
+            if (($packet[0] & 0xF0) !== 0x30 || strlen($packet[1]) < 2) {
+                continue;
+            }
+            $body = $packet[1];
+            $offset = 2 + unpack('n', substr($body, 0, 2))[1] + ((($packet[0] >> 1) & 3) > 0 ? 2 : 0);
+            if ($offset > strlen($body)) {
+                continue;
+            }
+            try {
+                $frames = $this->DecodeFrames(substr($body, $offset), $localKey);
+            } catch (RuntimeException $e) {
+                $this->SendDebug('Decode', $e->getMessage(), 0);
+                continue;
+            }
+            foreach ($frames as $frame) {
+                if ($frame['protocol'] === 301) {
+                    $binary = $frame['plain'];
+                    if (strlen($binary) < 40 || !hash_equals($endpoint, substr($binary, 0, 8)) || unpack('v', substr($binary, 16, 2))[1] !== $requestID) {
+                        continue;
+                    }
+                    $cipher = substr($binary, 24);
+                    $compressed = strlen($cipher) % 16 === 0 ? openssl_decrypt($cipher, 'aes-128-cbc', $nonce, OPENSSL_RAW_DATA, str_repeat("\0", 16)) : false;
+                    $map = is_string($compressed) ? @gzdecode($compressed, 16 * 1024 * 1024) : false;
+                    if (!is_string($map) || substr($map, 0, 2) !== 'rr') {
+                        return ['error' => $this->Translate('Map could not be decoded')];
+                    }
+                    return ['result' => base64_encode($map)];
+                }
+                foreach ((array) ($frame['data']['dps'] ?? []) as $dp => $value) {
+                    $answer = (string) $dp === '102' ? (is_string($value) ? json_decode($value, true) : $value) : null;
+                    if (!is_array($answer) || ($answer['id'] ?? null) !== $requestID) {
+                        continue;
+                    }
+                    if (isset($answer['error'])) {
+                        $error = $answer['error'];
+                        return ['error' => is_array($error) ? (string) ($error['message'] ?? json_encode($error)) : (string) $error];
+                    }
+                    // ["retry"]: the map is not ready yet; otherwise the binary message follows
+                    if (($answer['result'] ?? null) === ['retry']) {
+                        $retry = true;
+                        $deadline = min($deadline, microtime(true) + 2);
+                    }
+                }
+            }
+        }
+        return $retry ? ['retry' => true] : ['error' => $this->Translate('No map from the robot')];
     }
 
     private function MqttEndpoint(string $raw): array
@@ -665,6 +748,7 @@ class RoborockCloudAccount extends IPSModule
                 throw new RuntimeException('Invalid frame');
             }
             $time = unpack('N', substr($raw, $offset + 11, 4))[1];
+            $protocol = unpack('n', substr($raw, $offset + 15, 2))[1];
             $length = unpack('n', substr($raw, $offset + 17, 2))[1];
             if ($offset + 19 + $length + 4 > $size) {
                 throw new RuntimeException('Incomplete frame');
@@ -674,9 +758,9 @@ class RoborockCloudAccount extends IPSModule
                 throw new RuntimeException('CRC error');
             }
             $plain = openssl_decrypt(substr($raw, $offset + 19, $length), 'aes-128-ecb', $this->FrameKey($time, $localKey), OPENSSL_RAW_DATA);
-            $data = is_string($plain) ? json_decode($plain, true) : null;
-            if (is_array($data)) {
-                $frames[] = $data;
+            if (is_string($plain)) {
+                $data = json_decode($plain, true);
+                $frames[] = ['protocol' => $protocol, 'data' => is_array($data) ? $data : null, 'plain' => $plain];
             }
             $offset += 23 + $length;
         }

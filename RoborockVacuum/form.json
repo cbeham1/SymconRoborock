@@ -120,9 +120,14 @@
                     "caption": "Link this instance in the tile visualization: map in the middle, commands and room selection on the left, state, statistics and maintenance on the right."
                 },
                 {
+                    "type": "CheckBox",
+                    "name": "ShowMap",
+                    "caption": "Read the map from the robot (variable \"Map\": while cleaning with every update, otherwise every hour)"
+                },
+                {
                     "type": "SelectObject",
                     "name": "MapVariable",
-                    "caption": "Map (optional: HTML box with an image of the map, or image)"
+                    "caption": "Other map (optional, instead of the own map: HTML box with an image of the map, or image)"
                 },
                 {
                     "type": "Select",
@@ -196,6 +201,11 @@
                     "type": "Button",
                     "caption": "Locate robot",
                     "onClick": "RRV_Locate($id);"
+                },
+                {
+                    "type": "Button",
+                    "caption": "Read map now",
+                    "onClick": "echo RRV_UpdateMap($id) ? \"OK\" : \"Error, see debug\";"
                 }
             ]
         }

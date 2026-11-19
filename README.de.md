@@ -170,6 +170,13 @@ Schaltflächen: *Jetzt aktualisieren*, *Räume neu einlesen* (nach Umbenennen/Te
 18 Lüfterfehler, 22 Station nicht gefunden, 23 Rückkehr fehlgeschlagen, 24 Sperrzone, 27 VibraRise blockiert,
 28 Roboter auf Teppich, 29 Filter verstopft, 30 Unsichtbare Wand, 31 Teppich nicht überquerbar, 32 Interner Fehler.
 
+## Karte
+
+Die Sauger-Instanz liest die Karte selbst vom Roboter (`get_map_v1` über die Cloud-Instanz, Binärantwort Protokoll 301,
+AES-CBC mit dem Nonce der Anfrage, gzip) und zeichnet sie als SVG in die Variable **Karte**: Räume farbig, Weg, Roboter,
+Station und die Raumnamen der Raumliste. Beim Reinigen und auf dem Weg zur Station bei jeder Abfrage, nach der Rückkehr
+einmal, sonst stündlich; Knopf *Karte jetzt lesen*. Die Reinigungskachel nutzt diese Karte, solange keine *andere Karte* gewählt ist.
+
 ## Reinigungskachel
 
 Die Sauger-Instanz ist selbst eine Kachel der Kachel-Visualisierung (HTML-SDK, ab 1.8): die **Instanz** auf einer Seite

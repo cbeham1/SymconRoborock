@@ -141,6 +141,13 @@ Not both at the same time – the store reports a conflict otherwise.
 The protocol was reimplemented following the open source project
 [python-roborock](https://github.com/Python-roborock/python-roborock). No code of that project is included.
 
+## Map
+
+The vacuum instance reads the map from the robot itself (`get_map_v1` over the cloud instance, binary answer protocol 301,
+AES-CBC with the nonce of the request, gzip) and draws it as SVG into the variable **Map**: rooms in colours, path, robot,
+dock and the room names of the room list. While the robot is cleaning or driving to the dock with every update, once after it
+has returned, otherwise every hour; button *Read map now*. The cleaning tile uses this map unless *Other map* is selected.
+
 ## Cleaning tile
 
 The vacuum instance itself is a tile of the tile visualization (HTML-SDK, since 1.8): link the **instance** on a page
