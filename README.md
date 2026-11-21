@@ -30,7 +30,7 @@ needed: log in with your Roborock account, pick the robot in the configurator, d
 ## Features
 
 * Login with e-mail + password **or** with a one-time code sent by e-mail (two-step verification supported)
-* Automatic new login with the stored password when Roborock ends the session (at most every 6 hours)
+* Automatic new login with the stored password when Roborock ends the session (at most every 30 minutes; also when MQTT rejects the login)
 * Configurator lists all devices of the account (model, online state, device ID) and creates the instances
 * Per robot:
   * state (starting, cleaning, room cleaning, returning, charging, washing the mop, error, …) and a plain-text status

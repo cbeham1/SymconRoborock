@@ -43,6 +43,8 @@
             "No answer from the MQTT server": "Keine Antwort vom MQTT-Server",
             "MQTT login rejected": "MQTT-Anmeldung abgelehnt",
             "MQTT subscription rejected": "MQTT-Abonnement abgelehnt",
+            "log in again in the account instance": "in der Konto-Instanz neu anmelden",
+            "log in again in the account instance or wait for the automatic login at %s": "in der Konto-Instanz neu anmelden oder automatische Anmeldung um %s abwarten",
             "Connection closed": "Verbindung geschlossen",
             "No answer from the robot (offline?)": "Keine Antwort vom Roboter (offline?)",
             "Map could not be decoded": "Karte konnte nicht entschlüsselt werden",

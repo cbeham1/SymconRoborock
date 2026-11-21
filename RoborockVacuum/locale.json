@@ -17,6 +17,8 @@
             "No device ID configured, please create the instance with the configurator": "Keine Geräte-ID eingetragen, bitte Instanz über den Konfigurator anlegen",
             "Request failed, see debug output": "Abfrage fehlgeschlagen, siehe Debug-Ausgabe",
             "Command failed, see debug output / log": "Befehl fehlgeschlagen, siehe Debug-Ausgabe / Meldungen",
+            "Command failed": "Befehl fehlgeschlagen",
+            "No connection": "Keine Verbindung",
             "No response from the cloud instance": "Keine Antwort von der Cloud-Instanz",
             "Rooms could not be read": "Räume konnten nicht gelesen werden",
             "Room %d": "Raum %d",

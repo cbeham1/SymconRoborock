@@ -240,6 +240,9 @@ class RoborockCloudVacuum extends IPSModule
     public function RequestAction($Ident, $Value): void
     {
         $ok = true;
+        if ($this->GetStatus() !== self::STATUS_REQUEST_FAILED) {
+            $this->SetBuffer('LastError', '');
+        }
         switch ($Ident) {
             case 'Control':
                 $functions = [1 => 'Start', 2 => 'Pause', 3 => 'Stop', 4 => 'ReturnToDock', 5 => 'Resume', 6 => 'CleanSelectedRooms', 7 => 'Locate', 8 => 'EmptyDustBin', 9 => 'WashMop'];
@@ -283,7 +286,10 @@ class RoborockCloudVacuum extends IPSModule
                 throw new Exception('Invalid ident');
         }
         if (!$ok) {
-            echo $this->Translate('Command failed, see debug output / log');
+            // Always log a failed operation from the visualization, with the reason
+            $reason = $this->GetBuffer('LastError');
+            $this->LogMessage($Ident . ' = ' . json_encode($Value) . ': ' . ($reason !== '' ? $reason : $this->Translate('Command failed')), KL_WARNING);
+            echo $reason !== '' ? $this->Translate('Command failed') . ': ' . $reason : $this->Translate('Command failed, see debug output / log');
         }
         // Room selection and settings are shown in the tiles at once
         if ($this->ReadPropertyBoolean('ShowTile')) {
@@ -618,8 +624,10 @@ class RoborockCloudVacuum extends IPSModule
             return false;
         }
         if (isset($results[0]['error'])) {
-            $this->SendDebug($method, (string) $results[0]['error'], 0);
-            $this->LogMessage($method . ': ' . $results[0]['error'], KL_WARNING);
+            $error = is_scalar($results[0]['error']) ? (string) $results[0]['error'] : json_encode($results[0]['error']);
+            $this->SendDebug($method, $error, 0);
+            $this->LogMessage($method . ': ' . $error, KL_WARNING);
+            $this->SetBuffer('LastError', $method . ': ' . $error);
             return false;
         }
         // Read the new state shortly after the command
@@ -637,14 +645,22 @@ class RoborockCloudVacuum extends IPSModule
         if (!is_array($data) || isset($data['error'])) {
             $message = is_array($data) ? (string) $data['error'] : $this->Translate('No response from the cloud instance');
             $this->SendDebug($function, $message, 0);
+            $changed = $this->GetBuffer('LastError') !== $message || $this->GetStatus() !== self::STATUS_REQUEST_FAILED;
+            $this->SetBuffer('LastError', $message);
             if ($this->GetStatus() !== self::STATUS_REQUEST_FAILED) {
                 $this->LogMessage($function . ': ' . $message, KL_WARNING);
                 $this->SetStatus(self::STATUS_REQUEST_FAILED);
             }
+            if ($changed) {
+                // Shows the problem in the cleaning tile
+                $this->UpdateTile();
+            }
             return null;
         }
+        $this->SetBuffer('LastError', '');
         if ($this->GetStatus() !== IS_ACTIVE) {
             $this->SetStatus(IS_ACTIVE);
+            $this->UpdateTile();
         }
         return $data['result'] ?? null;
     }
@@ -962,7 +978,7 @@ class RoborockCloudVacuum extends IPSModule
         $updated = (int) $value('LastUpdate');
         $texts = [];
         foreach (['Start', 'All rooms', 'Pause', 'Resume', 'Stop', 'Dock', 'Locate', 'Rooms', 'Settings', 'Passes', 'No map', 'Battery', 'Charging',
-            'Last cleaning', 'Duration', 'Area', 'Statistics', 'Maintenance', 'Offline', 'Last update', 'Reset', 'Sure?'] as $text) {
+            'Last cleaning', 'Duration', 'Area', 'Statistics', 'Maintenance', 'Offline', 'Last update', 'Reset', 'Sure?', 'No connection'] as $text) {
             $texts[$text] = $this->Translate($text);
         }
         return [
@@ -973,6 +989,8 @@ class RoborockCloudVacuum extends IPSModule
             'battery'   => (int) $value('Battery'),
             'error'     => (int) $value('Error'),
             'errorText' => $this->ErrorText((int) $value('Error')),
+            // Connection problem (e.g. cloud login rejected): the values shown are old
+            'problem'   => $this->GetStatus() === self::STATUS_REQUEST_FAILED ? $this->GetBuffer('LastError') : '',
             'cleaning'  => in_array($state, self::CLEANING_STATES, true),
             'charging'  => $state === 8,
             'docked'    => in_array($state, [8, 22, 23, 100], true),

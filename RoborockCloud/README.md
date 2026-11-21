@@ -40,7 +40,7 @@ Roborock treats every new client as a new device. Typical answers:
 ### Automatic new login
 
 If Roborock rejects the token (HTTP 401/403, an auth error message, or MQTT CONNACK 4/5) and a password is stored, the
-instance logs in again – at most once every 6 hours – and repeats the request once. Without a password the status
+instance logs in again – at most once every 30 minutes – and repeats the request once. Without a password the status
 changes to *Please log in* and the request fails until you log in again.
 
 ## Requests of the children (data flow)

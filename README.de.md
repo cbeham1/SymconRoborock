@@ -32,7 +32,7 @@ English version: [README.md](README.md)
 ## Funktionen
 
 * Anmeldung mit E-Mail und Passwort **oder** mit einem Einmal-Code per E-Mail (Zwei-Faktor-Bestätigung)
-* automatische Neuanmeldung mit dem hinterlegten Passwort, wenn Roborock die Sitzung beendet (höchstens alle 6 h)
+* automatische Neuanmeldung mit dem hinterlegten Passwort, wenn Roborock die Sitzung beendet (höchstens alle 30 min; auch bei abgelehnter MQTT-Anmeldung)
 * Konfigurator: alle Geräte des Kontos mit Modell, Online-Status und Geräte-ID, Instanzen per Klick anlegen
 * je Roboter:
   * Zustand und Klartext-Status (z. B. *„Lädt zwischendurch, Reinigung wird fortgesetzt“*)

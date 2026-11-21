@@ -21,7 +21,7 @@ class RoborockCloudAccount extends IPSModule
     private const DEFAULT_BASE_URL = 'https://euiot.roborock.com';
     private const KEY_SALT = 'TXdfu$jyZ#TZHsg4';
     private const HOME_MAX_AGE = 3600;
-    private const AUTO_LOGIN_PAUSE = 21600;
+    private const AUTO_LOGIN_PAUSE = 1800;
     private const RPC_TIMEOUT = 10;
     private const MAP_TIMEOUT = 12;
     private const MAX_CALLS = 10;
@@ -250,7 +250,7 @@ class RoborockCloudAccount extends IPSModule
         $this->StoreLogin($this->Api('POST', $url, $this->LoginHeaders()));
     }
 
-    /** Automatic login with the stored password after the login expired, at most every 6 hours. */
+    /** Automatic login with the stored password after the login expired or MQTT rejected it, at most every 30 minutes. */
     private function TryAutoLogin(): bool
     {
         if ($this->ReadPropertyString('Password') === '' || time() - $this->ReadAttributeInteger('LastAutoLogin') < self::AUTO_LOGIN_PAUSE) {
@@ -483,8 +483,18 @@ class RoborockCloudAccount extends IPSModule
             try {
                 return $this->MqttSession($device, $calls);
             } catch (RuntimeException $e) {
-                if ($e->getCode() !== self::ERROR_AUTH || !$this->TryAutoLogin()) {
+                if ($e->getCode() !== self::ERROR_AUTH) {
                     throw $e;
+                }
+                if (!$this->TryAutoLogin()) {
+                    // Tell the user what to do instead of only "rejected"
+                    $hint = $this->ReadPropertyString('Password') === ''
+                        ? $this->Translate('log in again in the account instance')
+                        : sprintf(
+                            $this->Translate('log in again in the account instance or wait for the automatic login at %s'),
+                            date('H:i', $this->ReadAttributeInteger('LastAutoLogin') + self::AUTO_LOGIN_PAUSE)
+                        );
+                    throw new RuntimeException($e->getMessage() . ' – ' . $hint, self::ERROR_AUTH);
                 }
                 return $this->MqttSession($device, $calls);
             }
@@ -533,7 +543,8 @@ class RoborockCloudAccount extends IPSModule
             $this->Write($socket, "\x82" . $this->Length(strlen($subscribe)) . $subscribe);
             $suback = $this->ReadPacket($socket);
             if ($suback === null || ($suback[0] & 0xF0) !== 0x90 || strlen($suback[1]) < 3 || ord($suback[1][2]) === 0x80) {
-                throw new RuntimeException($this->Translate('MQTT subscription rejected'));
+                // Seen after the cloud renewed the login elsewhere: treat like a rejected login
+                throw new RuntimeException($this->Translate('MQTT subscription rejected'), self::ERROR_AUTH);
             }
 
             $endpoint = base64_encode(substr(md5($rriot['k'], true), 8, 6));
