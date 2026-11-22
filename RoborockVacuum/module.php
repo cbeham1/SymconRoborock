@@ -1208,6 +1208,36 @@ class RoborockCloudVacuum extends IPSModule
             $extend($width - $x - 5, $height - $y - 5);
             $extend($width - $x + 5, $height - $y + 5);
         }
+        // Crop to the drawn area (plus margin), so the map fills the tile instead of floating in empty space
+        $view = [0, 0, $width, $height];
+        if ($box[0] <= $box[2] && $box[1] <= $box[3]) {
+            $x0 = max(0, (int) floor($box[0]) - 4);
+            $y0 = max(0, (int) floor($box[1]) - 4);
+            $view = [$x0, $y0, min($width, (int) ceil($box[2]) + 4) - $x0, min($height, (int) ceil($box[3]) + 4) - $y0];
+        }
+        // Font size: 9 like before, smaller (down to 5) only as far as needed so that no two room names overlap
+        $places = [];
+        foreach ($stats as $segment => $stat) {
+            if ($stat['n'] >= 20) {
+                $places[] = [$width - ($stat['x'] / $stat['n'] + 0.5), $stat['y'] / $stat['n'] + 0.5, mb_strlen($names[$segment])];
+            }
+        }
+        $overlaps = static function (float $size) use ($places): bool
+        {
+            for ($a = 0; $a < count($places); $a++) {
+                for ($b = $a + 1; $b < count($places); $b++) {
+                    $halfWidth = 0.29 * $size * ($places[$a][2] + $places[$b][2]) + 1;
+                    if (abs($places[$a][0] - $places[$b][0]) < $halfWidth && abs($places[$a][1] - $places[$b][1]) < $size + 1) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        };
+        $font = 9.0;
+        while ($font > 5.0 && $overlaps($font)) {
+            $font -= 0.5;
+        }
         // Room names upright in the middle of each room (the drawing is turned by 180 degrees)
         $labels = '';
         foreach ($stats as $segment => $stat) {
@@ -1215,15 +1245,8 @@ class RoborockCloudVacuum extends IPSModule
                 continue;
             }
             $labels .= '<text x="' . round($width - ($stat['x'] / $stat['n'] + 0.5), 1) . '" y="' . round($stat['y'] / $stat['n'] + 0.5, 1)
-                . '" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="9" fill="#ffffff" stroke="#1a2432" stroke-width="2.5" stroke-linejoin="round" paint-order="stroke fill">'
+                . '" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="' . $font . '" fill="#ffffff" stroke="#1a2432" stroke-width="' . round($font * 0.28, 2) . '" stroke-linejoin="round" paint-order="stroke fill">'
                 . htmlspecialchars($names[$segment], ENT_QUOTES, 'UTF-8') . '</text>';
-        }
-        // Crop to the drawn area (plus margin), so the map fills the tile instead of floating in empty space
-        $view = [0, 0, $width, $height];
-        if ($box[0] <= $box[2] && $box[1] <= $box[3]) {
-            $x0 = max(0, (int) floor($box[0]) - 4);
-            $y0 = max(0, (int) floor($box[1]) - 4);
-            $view = [$x0, $y0, min($width, (int) ceil($box[2]) + 4) - $x0, min($height, (int) ceil($box[3]) + 4) - $y0];
         }
         return '<svg xmlns="http://www.w3.org/2000/svg" width="' . ($view[2] * 2) . '" height="' . ($view[3] * 2) . '" viewBox="' . implode(' ', $view) . '" shape-rendering="crispEdges">'
             . '<g transform="translate(' . $width . ' ' . $height . ') rotate(180)">' . $rects . $overlay . '</g>' . $labels . '</svg>';
