@@ -46,6 +46,7 @@ html,body{margin:0!important;height:100%;background:transparent;overflow:hidden}
   font-family:inherit;font-size:.92em;font-weight:600;text-align:left;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .room:before{content:"";position:absolute;left:.7em;top:50%;width:.95em;height:.95em;margin-top:-.48em;border-radius:.3em;border:2px solid var(--pc)}
 .room.on{border-color:var(--pc);background:color-mix(in srgb,var(--pc) 26%,transparent)}
+.room.queued{border-style:dashed}
 .room.on:before{border-color:var(--pc);background:var(--pc) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.2l2.3 2.3 4.7-5' stroke='%23fff' stroke-width='2' fill='none'/%3E%3C/svg%3E") center/.8em no-repeat}
 .set{display:flex;flex-direction:column;gap:.45em}
 .gap{height:.4em}
@@ -168,9 +169,11 @@ const picture = () => D.image ? '<img alt="" src="' + D.image + '">' : art(D.art
 
 function renderCtrl() {
   const chosen = D.rooms.filter(r => r.on);
+  const next = D.rooms.filter(r => r.queued).map(r => r.name).join(', ');
+  const after = next ? ' · ' + T('Next') + ': ' + next : '';
   let ctrl, icon, title, sub;
-  if (D.cleaning) { ctrl = 2; icon = ICON.pause; title = T('Pause'); sub = D.status; }
-  else if (D.taskOpen || D.state === 10) { ctrl = 5; icon = ICON.play; title = T('Resume'); sub = D.status; }
+  if (D.cleaning) { ctrl = 2; icon = ICON.pause; title = T('Pause'); sub = D.status + after; }
+  else if (D.taskOpen || D.state === 10) { ctrl = 5; icon = ICON.play; title = T('Resume'); sub = D.status + after; }
   else if (chosen.length) { ctrl = 6; icon = ICON.play; title = T('Start'); sub = chosen.map(r => r.name).join(', '); }
   else { ctrl = 1; icon = ICON.play; title = T('Start'); sub = T('All rooms'); }
   let h = '<button class="go" data-ctrl="' + ctrl + '"><span class="ic">' + icon + '</span><div><b>' + esc(title) + '</b><span>' + esc(sub) + '</span></div></button>'
@@ -181,7 +184,7 @@ function renderCtrl() {
     + '<button class="tool" style="--pc:var(--p2)" data-ctrl="7">' + ICON.find + T('Locate') + '</button></div>';
   if (D.rooms.length) {
     h += '<div class="sec">' + T('Rooms') + '</div><div class="rooms">'
-      + D.rooms.map((r, i) => '<button class="room' + (r.on ? ' on' : '') + '" style="--pc:' + ROOM[i % ROOM.length] + '" data-room="' + r.ident + '" title="' + esc(r.name) + '">' + esc(r.name) + '</button>').join('') + '</div>';
+      + D.rooms.map((r, i) => '<button class="room' + (r.on ? ' on' : '') + (r.queued ? ' queued' : '') + '" style="--pc:' + ROOM[i % ROOM.length] + '" data-room="' + r.ident + '" title="' + esc(r.name) + (r.queued ? ' – ' + esc(T('Next')) : '') + '">' + esc(r.name) + '</button>').join('') + '</div>';
   }
   h += '<div class="gap"></div>' + options('FanPower', D.fan) + options('WaterMode', D.water) + options('MopMode', D.mop);
   if (D.repeat !== null) {

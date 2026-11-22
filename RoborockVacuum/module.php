@@ -277,6 +277,7 @@ class RoborockCloudVacuum extends IPSModule
             default:
                 if (strpos((string) $Ident, 'Room') === 0) {
                     $this->SetValue($Ident, (bool) $Value);
+                    $this->QueueRoom((int) substr((string) $Ident, 4), (bool) $Value);
                     break;
                 }
                 throw new Exception('Invalid ident');
@@ -457,11 +458,13 @@ class RoborockCloudVacuum extends IPSModule
 
     public function Stop(): bool
     {
+        $this->ClearQueue();
         return $this->Command('app_stop');
     }
 
     public function ReturnToDock(): bool
     {
+        $this->ClearQueue();
         return $this->Command('app_charge');
     }
 
@@ -538,7 +541,47 @@ class RoborockCloudVacuum extends IPSModule
             echo $this->Translate('No rooms selected');
             return false;
         }
-        return $this->Command('app_segment_clean', [['segments' => $segments, 'repeat' => max(1, min(3, $Repeat))]]);
+        $ok = $this->Command('app_segment_clean', [['segments' => $segments, 'repeat' => max(1, min(3, $Repeat))]]);
+        if ($ok) {
+            // Remember the rooms of this job; rooms selected later are queued (see QueueRoom)
+            $session = json_decode($this->ReadAttributeString('Session'), true) ?: [];
+            $session['job'] = $segments;
+            $session['queue'] = array_values(array_diff((array) ($session['queue'] ?? []), $segments));
+            $this->WriteAttributeString('Session', json_encode($session));
+        }
+        return $ok;
+    }
+
+    /**
+     * Room switch changed: while a room cleaning is running, a room that is not part of the job is queued and cleaned
+     * right after the job (the robot cannot extend a running job); switched off again it leaves the queue.
+     */
+    private function QueueRoom(int $segment, bool $on): void
+    {
+        $session = json_decode($this->ReadAttributeString('Session'), true) ?: [];
+        $job = array_map('intval', (array) ($session['job'] ?? []));
+        $queue = array_map('intval', (array) ($session['queue'] ?? []));
+        $busy = !empty($session['active']) || in_array((int) $this->GetValue('State'), self::CLEANING_STATES, true) || (bool) @$this->GetValue('TaskOpen');
+        if ($on && $busy && $job !== [] && !in_array($segment, $job, true) && !in_array($segment, $queue, true)) {
+            $queue[] = $segment;
+        } elseif (!$on) {
+            $queue = array_values(array_diff($queue, [$segment]));
+        } else {
+            return;
+        }
+        $session['queue'] = $queue;
+        $this->WriteAttributeString('Session', json_encode($session));
+        $this->SendDebug('Queue', 'Rooms after the current job: ' . implode(',', $queue), 0);
+    }
+
+    /** Clears the room queue (stop / return to dock by the user). */
+    private function ClearQueue(): void
+    {
+        $session = json_decode($this->ReadAttributeString('Session'), true) ?: [];
+        if (!empty($session['queue'])) {
+            $session['queue'] = [];
+            $this->WriteAttributeString('Session', json_encode($session));
+        }
     }
 
     /** Cleans the rooms whose switch is on. */
@@ -976,11 +1019,13 @@ class RoborockCloudVacuum extends IPSModule
             return ['label' => IPS_GetName($vid), 'value' => (int) $this->GetValue($ident), 'options' => $list];
         };
         $state = (int) $value('State');
+        $queued = array_map('intval', (array) ((json_decode($this->ReadAttributeString('Session'), true) ?: [])['queue'] ?? []));
         $rooms = [];
         foreach ($this->Rooms() as $room) {
             $ident = 'Room' . (int) $room['segment'];
             if ($id($ident) > 0) {
-                $rooms[] = ['ident' => $ident, 'name' => (string) $room['name'], 'on' => (bool) $this->GetValue($ident)];
+                $rooms[] = ['ident' => $ident, 'name' => (string) $room['name'], 'on' => (bool) $this->GetValue($ident),
+                    'queued' => in_array((int) $room['segment'], $queued, true)];
             }
         }
         $parts = [];
@@ -998,7 +1043,7 @@ class RoborockCloudVacuum extends IPSModule
         $updated = (int) $value('LastUpdate');
         $texts = [];
         foreach (['Start', 'All rooms', 'Pause', 'Resume', 'Stop', 'Dock', 'Locate', 'Rooms', 'Settings', 'Passes', 'No map', 'Battery', 'Charging',
-            'Last cleaning', 'Duration', 'Area', 'Statistics', 'Maintenance', 'Offline', 'Last update', 'Reset', 'Sure?', 'No connection'] as $text) {
+            'Last cleaning', 'Duration', 'Area', 'Statistics', 'Maintenance', 'Offline', 'Last update', 'Reset', 'Sure?', 'No connection', 'Next'] as $text) {
             $texts[$text] = $this->Translate($text);
         }
         return [
@@ -1311,6 +1356,18 @@ class RoborockCloudVacuum extends IPSModule
                 ));
                 $session['active'] = false;
                 $session['endPending'] = 0;
+                // Rooms selected during the job (and still selected): clean them now
+                $queue = array_values(array_filter(array_map('intval', (array) ($session['queue'] ?? [])),
+                    fn (int $segment): bool => (bool) @$this->GetValue('Room' . $segment)));
+                $session['queue'] = [];
+                $session['job'] = [];
+                $this->WriteAttributeString('Session', json_encode($session));
+                if ($queue !== []) {
+                    $repeat = @$this->GetIDForIdent('Repeat') ? (int) $this->GetValue('Repeat') : 1;
+                    $this->SendDebug('Queue', 'Starting the queued rooms ' . implode(',', $queue), 0);
+                    $this->CleanRooms(implode(',', $queue), $repeat);
+                    $session = json_decode($this->ReadAttributeString('Session'), true) ?: $session;
+                }
             }
         }
         if ($error > 0 && $error !== $session['error']) {
