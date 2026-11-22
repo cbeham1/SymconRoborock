@@ -190,12 +190,7 @@ class RoborockCloudVacuum extends IPSModule
     public function GetConfigurationForm(): string
     {
         $form = json_decode((string) file_get_contents(__DIR__ . '/form.json'), true);
-        $settings = [];
-        foreach (json_decode($this->ReadPropertyString('RoomSettings'), true) ?: [] as $row) {
-            if (isset($row['segment'])) {
-                $settings[(int) $row['segment']] = $row;
-            }
-        }
+        $settings = $this->RoomSettingsBySegment();
         $values = [];
         foreach (json_decode($this->ReadAttributeString('Rooms'), true) ?: [] as $room) {
             $setting = $settings[(int) $room['segment']] ?? [];
@@ -881,14 +876,31 @@ class RoborockCloudVacuum extends IPSModule
      * Rooms of the robot with the own names of the property "RoomSettings" (empty = name from the app);
      * hidden rooms only with $all (then with show = false).
      */
-    private function Rooms(bool $all = false): array
+    /**
+     * Rows of the property "RoomSettings" by segment. The console saves only the editable columns (own name, show),
+     * so a row may come without "segment": then it belongs to the room at the same position of the room list,
+     * because the form shows the rows in exactly that order.
+     */
+    private function RoomSettingsBySegment(): array
     {
+        $rooms = json_decode($this->ReadAttributeString('Rooms'), true) ?: [];
         $settings = [];
-        foreach (json_decode($this->ReadPropertyString('RoomSettings'), true) ?: [] as $row) {
+        foreach (array_values(json_decode($this->ReadPropertyString('RoomSettings'), true) ?: []) as $index => $row) {
+            if (!is_array($row)) {
+                continue;
+            }
             if (isset($row['segment'])) {
                 $settings[(int) $row['segment']] = $row;
+            } elseif (isset($rooms[$index]['segment'])) {
+                $settings[(int) $rooms[$index]['segment']] = $row;
             }
         }
+        return $settings;
+    }
+
+    private function Rooms(bool $all = false): array
+    {
+        $settings = $this->RoomSettingsBySegment();
         $rooms = [];
         foreach (json_decode($this->ReadAttributeString('Rooms'), true) ?: [] as $room) {
             $setting = $settings[(int) $room['segment']] ?? [];
