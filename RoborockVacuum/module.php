@@ -897,6 +897,9 @@ class RoborockCloudVacuum extends IPSModule
                 $rooms[] = ['segment' => (int) $room['segment'], 'name' => $name !== '' ? $name : (string) $room['name'], 'show' => $show];
             }
         }
+        // Alphabetical order (umlauts like their base letter, numbers natural)
+        $key = static fn (string $name): string => strtr(mb_strtolower($name), ['ä' => 'a', 'ö' => 'o', 'ü' => 'u', 'ß' => 'ss']);
+        usort($rooms, static fn (array $a, array $b): int => strnatcmp($key($a['name']), $key($b['name'])) ?: $a['segment'] <=> $b['segment']);
         return $rooms;
     }
 
@@ -916,6 +919,10 @@ class RoborockCloudVacuum extends IPSModule
                 $id = $this->GetIDForIdent($ident);
                 if (IPS_GetName($id) !== (string) $room['name']) {
                     IPS_SetName($id, (string) $room['name']);
+                }
+                // Alphabetical order also in the object tree
+                if (IPS_GetObject($id)['ObjectPosition'] !== 100 + $index) {
+                    IPS_SetPosition($id, 100 + $index);
                 }
             }
         }
