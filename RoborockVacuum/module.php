@@ -1323,7 +1323,11 @@ class RoborockCloudVacuum extends IPSModule
         if (in_array($state, self::CLEANING_STATES, true)) {
             $session['endPending'] = 0;
             if (!$session['active']) {
-                $selected = array_filter($this->Rooms(), fn (array $room): bool => (bool) @$this->GetValue('Room' . $room['segment']));
+                // Rooms of the job started by the module; otherwise (started elsewhere) the selected switches
+                $job = array_map('intval', (array) ($session['job'] ?? []));
+                $selected = $job !== []
+                    ? array_filter($this->Rooms(true), fn (array $room): bool => in_array((int) $room['segment'], $job, true))
+                    : array_filter($this->Rooms(), fn (array $room): bool => (bool) @$this->GetValue('Room' . $room['segment']));
                 $session['active'] = true;
                 $session['start'] = $now;
                 $session['recharging'] = false;
