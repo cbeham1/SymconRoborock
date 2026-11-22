@@ -1109,9 +1109,54 @@ class RoborockCloudVacuum extends IPSModule
         }
         // Read via the configuration: after an update the property exists only once the module has been reloaded
         $hideUnnamed = (bool) (json_decode(IPS_GetConfiguration($this->InstanceID), true)['MapHideUnnamedRooms'] ?? false) && $known !== [];
-        $pixel = static fn (int $value): int => ($hideUnnamed && ($value & 7) !== 0 && !isset($known[$value >> 3])) ? 0 : $value;
+        $pixel = static fn (int $value): int => $value;
+        if ($hideUnnamed) {
+            // 1. Pixels of rooms without name are removed
+            $size = $width * $height;
+            for ($i = 0; $i < $size; $i++) {
+                $value = ord($image[$i]);
+                if (($value & 7) !== 0 && !isset($known[$value >> 3])) {
+                    $image[$i] = "\0";
+                }
+            }
+            // 2. Walls and other non-room pixels stay only next to a visible room (radius 2 pixels),
+            //    otherwise the outlines of the hidden rooms would remain as scattered remains
+            $clean = $image;
+            for ($row = 0; $row < $height; $row++) {
+                for ($col = 0; $col < $width; $col++) {
+                    $value = ord($image[$row * $width + $col]);
+                    if ($value === 0 || ($value & 7) !== 0) {
+                        continue;
+                    }
+                    $nearRoom = false;
+                    for ($dy = -2; $dy <= 2 && !$nearRoom; $dy++) {
+                        $y = $row + $dy;
+                        if ($y < 0 || $y >= $height) {
+                            continue;
+                        }
+                        for ($dx = -2; $dx <= 2; $dx++) {
+                            $x = $col + $dx;
+                            if ($x >= 0 && $x < $width && (ord($image[$y * $width + $x]) & 7) !== 0) {
+                                $nearRoom = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (!$nearRoom) {
+                        $clean[$row * $width + $col] = "\0";
+                    }
+                }
+            }
+            $image = $clean;
+        }
         $rects = '';
         $stats = [];
+        // Bounding box of everything drawn, in the coordinates of the finished (turned) drawing
+        $box = [PHP_INT_MAX, PHP_INT_MAX, PHP_INT_MIN, PHP_INT_MIN];
+        $extend = static function (float $x, float $y) use (&$box): void
+        {
+            $box = [min($box[0], $x), min($box[1], $y), max($box[2], $x), max($box[3], $y)];
+        };
         for ($row = 0; $row < $height; $row++) {
             $col = 0;
             while ($col < $width) {
@@ -1134,6 +1179,8 @@ class RoborockCloudVacuum extends IPSModule
                     $stats[$segment]['y'] += $row * $run;
                 }
                 $rects .= '<rect x="' . $start . '" y="' . ($height - 1 - $row) . '" width="' . ($col - $start) . '" height="1" fill="' . $fill . '"/>';
+                $extend($width - $col, $row);
+                $extend($width - $start, $row + 1);
             }
         }
         // Path, robot and dock: 50 map units per pixel
@@ -1151,11 +1198,15 @@ class RoborockCloudVacuum extends IPSModule
             $point = unpack('V2', substr($blocks[8], 0, 8));
             [$x, $y] = $project($point[1], $point[2]);
             $overlay .= '<circle cx="' . $x . '" cy="' . $y . '" r="5.5" fill="#ffcc4d" stroke="#202b3a" stroke-width="1.5"/><circle cx="' . $x . '" cy="' . $y . '" r="1.5" fill="#202b3a"/>';
+            $extend($width - $x - 6, $height - $y - 6);
+            $extend($width - $x + 6, $height - $y + 6);
         }
         if (isset($blocks[1]) && strlen($blocks[1]) >= 8) {
             $point = unpack('V2', substr($blocks[1], 0, 8));
             [$x, $y] = $project($point[1], $point[2]);
             $overlay .= '<rect x="' . ($x - 4) . '" y="' . ($y - 4) . '" width="8" height="8" rx="2" fill="#ffffff" stroke="#29364a" stroke-width="1.2"/>';
+            $extend($width - $x - 5, $height - $y - 5);
+            $extend($width - $x + 5, $height - $y + 5);
         }
         // Room names upright in the middle of each room (the drawing is turned by 180 degrees)
         $labels = '';
@@ -1167,7 +1218,14 @@ class RoborockCloudVacuum extends IPSModule
                 . '" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="9" fill="#ffffff" stroke="#1a2432" stroke-width="2.5" stroke-linejoin="round" paint-order="stroke fill">'
                 . htmlspecialchars($names[$segment], ENT_QUOTES, 'UTF-8') . '</text>';
         }
-        return '<svg xmlns="http://www.w3.org/2000/svg" width="' . ($width * 2) . '" height="' . ($height * 2) . '" viewBox="0 0 ' . $width . ' ' . $height . '" shape-rendering="crispEdges">'
+        // Crop to the drawn area (plus margin), so the map fills the tile instead of floating in empty space
+        $view = [0, 0, $width, $height];
+        if ($box[0] <= $box[2] && $box[1] <= $box[3]) {
+            $x0 = max(0, (int) floor($box[0]) - 4);
+            $y0 = max(0, (int) floor($box[1]) - 4);
+            $view = [$x0, $y0, min($width, (int) ceil($box[2]) + 4) - $x0, min($height, (int) ceil($box[3]) + 4) - $y0];
+        }
+        return '<svg xmlns="http://www.w3.org/2000/svg" width="' . ($view[2] * 2) . '" height="' . ($view[3] * 2) . '" viewBox="' . implode(' ', $view) . '" shape-rendering="crispEdges">'
             . '<g transform="translate(' . $width . ' ' . $height . ') rotate(180)">' . $rects . $overlay . '</g>' . $labels . '</svg>';
     }
 
