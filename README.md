@@ -148,6 +148,14 @@ AES-CBC with the nonce of the request, gzip) and draws it as SVG into the variab
 dock and the room names of the room list. While the robot is cleaning or driving to the dock with every update, once after it
 has returned, otherwise every hour; button *Read map now*. The cleaning tile uses this map unless *Other map* is selected.
 
+The map is cropped to the drawn area (rooms, robot, dock) so that it fills the tile. Room names have their normal size and
+only get smaller where they would overlap. Option **Hide rooms without name in the map** (below *Rotate map*): areas that
+are not assigned to a room in the app – e.g. a helper room after splitting a room – are not drawn, including their outlines.
+Rooms are sorted alphabetically (tile, room switches, object tree); own names from the list *Rooms* take precedence over the
+app names.
+
+![Cleaning tile ground floor](docs/kachel-eg.jpg)
+
 ## Notifications
 
 The instance recognises start, recharging (task still open while charging) and continuing, end (docked without open task

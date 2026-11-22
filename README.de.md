@@ -177,6 +177,15 @@ AES-CBC mit dem Nonce der Anfrage, gzip) und zeichnet sie als SVG in die Variabl
 Station und die Raumnamen der Raumliste. Beim Reinigen und auf dem Weg zur Station bei jeder Abfrage, nach der Rückkehr
 einmal, sonst stündlich; Knopf *Karte jetzt lesen*. Die Reinigungskachel nutzt diese Karte, solange keine *andere Karte* gewählt ist.
 
+Die Karte wird auf den gezeichneten Bereich (Räume, Roboter, Station) zugeschnitten, damit sie die Kachel füllt. Raumnamen
+sind normal groß und werden nur dort kleiner, wo sie sich sonst überlappen würden. Option **Räume ohne Namen in der Karte
+ausblenden** (unter *Karte drehen*): Bereiche, die in der App keinem Raum zugeordnet sind – z. B. ein Hilfsraum nach dem
+Teilen eines Raums –, werden samt ihren Umrissen nicht gezeichnet.
+
+![Reinigungskachel Erdgeschoss](docs/kachel-eg.jpg)
+
+![Reinigungskachel Obergeschoss](docs/kachel-og.jpg)
+
 ## Benachrichtigungen
 
 Die Instanz erkennt Start, Zwischenladen (Auftrag offen beim Laden) und Fortsetzen, Ende (90 s angedockt ohne offenen
@@ -230,7 +239,9 @@ Nicht jeder Roboter kann jede Stufe; unbekannte Werte lehnt der Roboter ab (*„
 
 Die Räume kommen aus der Karte des Roboters (`get_room_mapping`) und den Raumnamen des Zuhauses in der App. Je Raum
 entsteht ein Schalter mit Ident `Room<Segment>`. Nach Umbenennen, Teilen oder Zusammenlegen von Räumen in der App
-**Räume neu einlesen** – Namen werden angepasst, Schalter nicht mehr vorhandener Räume entfernt.
+**Räume neu einlesen** – Namen werden angepasst, Schalter nicht mehr vorhandener Räume entfernt. Die Räume stehen
+alphabetisch sortiert (Kachel, Raumschalter, Objektbaum); eigene Namen aus der Liste *Räume* haben Vorrang vor den
+App-Namen.
 
 ## PHP-Befehle und Beispiele
 
