@@ -153,6 +153,11 @@
                     ]
                 },
                 {
+                    "type": "CheckBox",
+                    "name": "MapHideUnnamedRooms",
+                    "caption": "Hide rooms without name in the map (e.g. helper rooms after splitting a room)"
+                },
+                {
                     "type": "SelectMedia",
                     "name": "RobotImage",
                     "caption": "Picture of the robot (optional, image)"

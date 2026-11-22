@@ -164,6 +164,7 @@
             "Floor": "Stockwerk",
             "Map %d": "Karte %d",
             "Rotate map": "Karte drehen",
+            "Hide rooms without name in the map (e.g. helper rooms after splitting a room)": "Räume ohne Namen in der Karte ausblenden (z. B. Hilfsräume nach dem Teilen eines Raums)",
             "Reset": "Zurücksetzen",
             "Sure?": "Sicher?",
             "Own names (empty = name from the Roborock app) and which rooms are shown. Rooms are read with \"Reload rooms\".": "Eigene Namen (leer = Name aus der Roborock-App) und welche Räume angezeigt werden. Räume werden mit „Räume neu einlesen“ gelesen.",

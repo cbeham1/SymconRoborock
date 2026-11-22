@@ -134,6 +134,7 @@ class RoborockCloudVacuum extends IPSModule
         $this->RegisterPropertyInteger('RobotImage', 0);
         $this->RegisterPropertyInteger('RobotArt', 0);
         $this->RegisterPropertyInteger('MapRotation', 0);
+        $this->RegisterPropertyBoolean('MapHideUnnamedRooms', false);
         $this->RegisterPropertyString('RoomSettings', '[]');
 
         $this->RegisterAttributeString('Rooms', '[]');
@@ -1100,19 +1101,28 @@ class RoborockCloudVacuum extends IPSModule
         foreach ($this->Rooms() as $room) {
             $names[$room['segment']] = $room['name'];
         }
+        // Option "hide rooms without name": segments that are not in the room list of the app (e.g. helper rooms
+        // created by splitting a room) are not drawn. Only when the rooms have been read, otherwise everything would vanish.
+        $known = [];
+        foreach ($this->Rooms(true) as $room) {
+            $known[$room['segment']] = true;
+        }
+        // Read via the configuration: after an update the property exists only once the module has been reloaded
+        $hideUnnamed = (bool) (json_decode(IPS_GetConfiguration($this->InstanceID), true)['MapHideUnnamedRooms'] ?? false) && $known !== [];
+        $pixel = static fn (int $value): int => ($hideUnnamed && ($value & 7) !== 0 && !isset($known[$value >> 3])) ? 0 : $value;
         $rects = '';
         $stats = [];
         for ($row = 0; $row < $height; $row++) {
             $col = 0;
             while ($col < $width) {
-                $value = ord($image[$row * $width + $col]);
+                $value = $pixel(ord($image[$row * $width + $col]));
                 if ($value === 0) {
                     $col++;
                     continue;
                 }
                 $fill = $color($value);
                 $start = $col++;
-                while ($col < $width && ($next = ord($image[$row * $width + $col])) !== 0 && $color($next) === $fill) {
+                while ($col < $width && ($next = $pixel(ord($image[$row * $width + $col]))) !== 0 && $color($next) === $fill) {
                     $col++;
                 }
                 $segment = $value >> 3;
